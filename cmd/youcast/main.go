@@ -34,9 +34,13 @@ func main() {
 		go func(videoID string) {
 			defer wg.Done()
 
-			if err := youcast.DownloadAudio(ctx, videoID); err != nil {
-				log.Printf("failed to download %s: %s", videoID, err)
+			yt := youcast.NewYouTubeVideo(videoID)
+			u, _, err := yt.AudioStreamURL(ctx)
+			if err != nil {
+				log.Printf("failed to fetch audio URL for %s: %s", videoID, err)
+				return
 			}
+			fmt.Println(u)
 		}(videoID)
 	}
 
