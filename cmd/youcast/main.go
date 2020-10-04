@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"sync"
 
 	"github.com/andrewslotin/youcast"
@@ -16,6 +18,15 @@ func main() {
 		os.Exit(2)
 	}
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, os.Kill)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-sigs
+		cancel()
+	}()
+
 	var wg sync.WaitGroup
 	wg.Add(len(os.Args) - 1)
 
@@ -23,7 +34,7 @@ func main() {
 		go func(videoID string) {
 			defer wg.Done()
 
-			if err := youcast.DownloadAudio(videoID); err != nil {
+			if err := youcast.DownloadAudio(ctx, videoID); err != nil {
 				log.Printf("failed to download %s: %s", videoID, err)
 			}
 		}(videoID)

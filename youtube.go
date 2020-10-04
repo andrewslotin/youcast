@@ -1,6 +1,7 @@
 package youcast
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -15,12 +16,12 @@ import (
 
 var ErrNoAudio = errors.New("no audio formats found")
 
-func DownloadAudio(videoID string) error {
+func DownloadAudio(ctx context.Context, videoID string) error {
 	log.Printf("downloading %s", videoID)
 
 	yt := NewYouTubeVideo(videoID)
 
-	stream, mimeType, err := yt.AudioStream()
+	stream, mimeType, err := yt.AudioStream(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to download audio: %w", err)
 	}
@@ -60,8 +61,8 @@ func NewYouTubeVideo(videoID string) *YouTubeVideo {
 	}
 }
 
-func (y *YouTubeVideo) AudioStream() (io.ReadCloser, string, error) {
-	video, err := y.c.GetVideo(y.videoID)
+func (y *YouTubeVideo) AudioStream(ctx context.Context) (io.ReadCloser, string, error) {
+	video, err := y.c.GetVideoContext(ctx, y.videoID)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get video info: %w", err)
 	}
@@ -74,7 +75,7 @@ func (y *YouTubeVideo) AudioStream() (io.ReadCloser, string, error) {
 
 	y.log.Printf("got the best audio stream %s @ %d bps", mimeType, bestAudio.Bitrate)
 
-	s, err := y.c.GetStream(video, &bestAudio)
+	s, err := y.c.GetStreamContext(ctx, video, &bestAudio)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch %s stream: %w", bestAudio.MimeType, err)
 	}
