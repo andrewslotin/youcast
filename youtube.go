@@ -1,12 +1,17 @@
-package youcast
+package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"math"
+	"net/http"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kkdai/youtube/v2"
 )
@@ -19,6 +24,15 @@ type YouTubeVideo struct {
 	log     *log.Logger
 }
 
+type Metadata struct {
+	Link          string
+	Title         string
+	Author        string
+	Duration      time.Duration
+	MIMEType      string
+	ContentLength int64
+}
+
 func NewYouTubeVideo(videoID string) *YouTubeVideo {
 	return &YouTubeVideo{
 		videoID: videoID,
@@ -26,29 +40,76 @@ func NewYouTubeVideo(videoID string) *YouTubeVideo {
 	}
 }
 
-func (y *YouTubeVideo) AudioStreamURL(ctx context.Context) (string, string, error) {
+func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 	video, err := y.c.GetVideoContext(ctx, y.videoID)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get video info: %w", err)
+		return Metadata{}, fmt.Errorf("failed to get video info: %w", err)
 	}
-	y.log.Printf("got video info")
 
-	bestAudio, mimeType, err := pickBestAudio(video.Formats)
+	bestAudio, err := pickBestAudio(video.Formats)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to find audio: %w", err)
+		return Metadata{}, fmt.Errorf("failed to find audio: %w", err)
 	}
 
-	y.log.Printf("got the best audio stream %s @ %d bps", mimeType, bestAudio.Bitrate)
+	y.log.Printf("got the best audio stream %s @ %d bps", bestAudio.MimeType, bestAudio.Bitrate)
+
+	cl, err := strconv.ParseInt(bestAudio.ContentLength, 10, 64)
+	if err != nil {
+		log.Printf("failed to parse content length, will estimate: %s", err)
+		cl = int64(math.Ceil(float64(bestAudio.Bitrate) * video.Duration.Seconds()))
+	}
+
+	return Metadata{
+		Link:          "https://www.youtube.com/watch?v=" + y.videoID,
+		Title:         video.Title,
+		Author:        video.Author,
+		Duration:      video.Duration,
+		MIMEType:      bestAudio.MimeType,
+		ContentLength: cl,
+	}, nil
+}
+
+func (y *YouTubeVideo) AudioStream(ctx context.Context) (io.ReadCloser, http.Header, error) {
+	video, err := y.c.GetVideoContext(ctx, y.videoID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get video info: %w", err)
+	}
+
+	bestAudio, err := pickBestAudio(video.Formats)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find audio: %w", err)
+	}
+
+	y.log.Printf("found %s stream for %s @ %d bps", bestAudio.MimeType, y.videoID, bestAudio.Bitrate)
+
+	resp, err := y.c.GetStreamContext(ctx, video, &bestAudio)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch %s stream: %w", bestAudio.MimeType, err)
+	}
+
+	return resp.Body, resp.Header, nil
+}
+
+func (y *YouTubeVideo) AudioStreamURL(ctx context.Context) (string, error) {
+	video, err := y.c.GetVideoContext(ctx, y.videoID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get video info: %w", err)
+	}
+
+	bestAudio, err := pickBestAudio(video.Formats)
+	if err != nil {
+		return "", fmt.Errorf("failed to find audio: %w", err)
+	}
 
 	u, err := y.c.GetStreamURLContext(ctx, video, &bestAudio)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to fetch URL for %s stream: %w", bestAudio.MimeType, err)
+		return "", fmt.Errorf("failed to fetch %s stream: %w", bestAudio.MimeType, err)
 	}
 
-	return u, mimeType, nil
+	return u, nil
 }
 
-func pickBestAudio(formats youtube.FormatList) (youtube.Format, string, error) {
+func pickBestAudio(formats youtube.FormatList) (youtube.Format, error) {
 	audio := make(map[string]youtube.FormatList)
 	for _, format := range formats {
 		if !strings.HasPrefix(format.MimeType, "audio/") {
@@ -66,11 +127,37 @@ func pickBestAudio(formats youtube.FormatList) (youtube.Format, string, error) {
 		}
 
 		sort.Slice(formats, func(i, j int) bool {
-			return formats[i].Bitrate < formats[j].Bitrate
+			if formats[i].AudioChannels == formats[j].AudioChannels {
+				return parseAudioQuality(formats[i].AudioQuality) > parseAudioQuality(formats[j].AudioQuality)
+			}
+
+			return formats[i].AudioChannels > formats[j].AudioChannels
 		})
 
-		return formats[0], mimeType, nil
+		return formats[0], nil
 	}
 
-	return youtube.Format{}, "", ErrNoAudio
+	return youtube.Format{}, ErrNoAudio
+}
+
+type audioQuality uint8
+
+const (
+	unknownQuality audioQuality = iota
+	lowQuality
+	mediumQuality
+	highQuality
+)
+
+func parseAudioQuality(s string) audioQuality {
+	switch s {
+	case "AUDIO_QUALITY_LOW":
+		return lowQuality
+	case "AUDIO_QUALITY_MEDIUM":
+		return mediumQuality
+	case "AUDIO_QUALITY_HIGH":
+		return highQuality
+	default:
+		return unknownQuality
+	}
 }
