@@ -56,6 +56,12 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 
 	p := podcast.New(srv.meta.Title, feedLink, srv.meta.Description, pubDate, nil)
 	for _, it := range items {
+		id, err := extractYouTubeID(it.OriginalURL)
+		if err != nil {
+			log.Printf("failed to extract YouTube video ID from %s: %s", it.OriginalURL, err)
+			continue
+		}
+
 		item := podcast.Item{
 			Title: it.Title,
 			Author: &podcast.Author{
@@ -67,7 +73,7 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 			PubDate:     &it.AddedAt,
 		}
 		item.AddEnclosure(
-			scheme+"://"+req.Host+it.URL,
+			scheme+"://"+req.Host+"/audio/youtube?v="+id,
 			mimeTypeToEnclosureType(it.MIMEType),
 			int64(it.ContentLength),
 		)
@@ -107,9 +113,9 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := srv.st.Add(PodcastItem{
+		Type:          YouTubeItem,
 		Title:         meta.Title,
 		Author:        meta.Author,
-		URL:           "/audio/youtube?v=" + id,
 		OriginalURL:   meta.Link,
 		Duration:      meta.Duration,
 		MIMEType:      meta.MIMEType,

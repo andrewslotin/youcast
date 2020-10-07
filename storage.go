@@ -5,10 +5,16 @@ import (
 	"time"
 )
 
+type PodcastItemType uint8
+
+const (
+	YouTubeItem PodcastItemType = iota + 1
+)
+
 type PodcastItem struct {
+	Type          PodcastItemType
 	Title         string
 	Author        string
-	URL           string
 	OriginalURL   string
 	Duration      time.Duration
 	MIMEType      string
