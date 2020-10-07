@@ -5,14 +5,20 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/boltdb/bolt"
 )
+
+const DefaultDBPath = "youcast.db"
 
 var args struct {
 	ListenAddr string
+	DBPath     string
 }
 
 func main() {
 	flag.StringVar(&args.ListenAddr, "l", os.Getenv("LISTEN_ADDR"), "Listen address")
+	flag.StringVar(&args.DBPath, "db", os.Getenv("DB_PATH"), "Path to the database")
 	flag.Parse()
 
 	if p, ok := os.LookupEnv("PORT"); ok {
@@ -23,11 +29,21 @@ func main() {
 		log.Fatalln("missing listen address")
 	}
 
+	if args.DBPath == "" {
+		log.Println("missing DB_PATH, using", DefaultDBPath, "as a default")
+		args.DBPath = DefaultDBPath
+	}
+
+	db, err := bolt.Open(args.DBPath, 0600, nil)
+	if err != nil {
+		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
+	}
+
 	srv := NewFeedServer(PodcastMetadata{
 		Title:       "LaterTube",
 		Link:        "http://localhost:5000",
 		Description: "YouTube audio as a podcast",
-	}, &memoryStorage{})
+	}, newBoltStorage("feed", db))
 
 	http.HandleFunc("/", srv.HandleAddItem)
 	http.HandleFunc("/feed", srv.ServeFeed)
