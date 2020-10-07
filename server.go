@@ -49,7 +49,12 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 		scheme = "https"
 	}
 
-	p := podcast.New(srv.meta.Title, srv.meta.Link, srv.meta.Description, pubDate, nil)
+	feedLink := srv.meta.Link
+	if feedLink == "" {
+		feedLink = scheme + "://" + req.Host
+	}
+
+	p := podcast.New(srv.meta.Title, feedLink, srv.meta.Description, pubDate, nil)
 	for _, it := range items {
 		item := podcast.Item{
 			Title: it.Title,
