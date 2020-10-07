@@ -15,6 +15,10 @@ func main() {
 	flag.StringVar(&args.ListenAddr, "l", os.Getenv("LISTEN_ADDR"), "Listen address")
 	flag.Parse()
 
+	if p, ok := os.LookupEnv("PORT"); ok {
+		args.ListenAddr = ":" + p
+	}
+
 	if args.ListenAddr == "" {
 		log.Fatalln("missing listen address")
 	}
