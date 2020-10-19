@@ -41,7 +41,6 @@ func main() {
 
 	srv := NewFeedServer(PodcastMetadata{
 		Title:       "LaterTube",
-		Link:        "http://localhost:5000",
 		Description: "YouTube audio as a podcast",
 	}, newBoltStorage("feed", db))
 

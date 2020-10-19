@@ -56,6 +56,8 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	}
 
 	p := podcast.New(srv.meta.Title, feedLink, srv.meta.Description, pubDate, nil)
+	p.AddImage("https://" + req.Host + "/favicon.ico")
+
 	for _, it := range items {
 		id, err := extractYouTubeID(it.OriginalURL)
 		if err != nil {
