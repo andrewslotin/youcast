@@ -135,7 +135,7 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	//	http.Redirect(w, req, u, http.StatusSeeOther)
+	http.Redirect(w, req, u, http.StatusSeeOther)
 }
 
 func (srv *FeedServer) ServeYoutubeAudio(w http.ResponseWriter, req *http.Request) {
@@ -144,25 +144,7 @@ func (srv *FeedServer) ServeYoutubeAudio(w http.ResponseWriter, req *http.Reques
 		http.Error(w, "missing v=<youtubeID> parameter", http.StatusBadRequest)
 		return
 	}
-	/*
-		stream, headers, err := NewYouTubeVideo(id).AudioStream(req.Context())
-		if err != nil {
-			if err == ErrNoAudio {
-				http.Error(w, "no audio found for "+id, http.StatusNotFound)
-				return
-			}
 
-			log.Println("failed to open YouTube video stream:", err)
-			return
-		}
-		defer stream.Close()
-
-		for k := range headers {
-			w.Header().Set(k, headers.Get(k))
-		}
-
-		io.Copy(w, stream)
-	*/
 	u, err := NewYouTubeVideo(id).AudioStreamURL(req.Context())
 	if err != nil {
 		if err == ErrNoAudio {
