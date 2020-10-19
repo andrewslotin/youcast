@@ -48,6 +48,7 @@ func main() {
 	http.HandleFunc("/", srv.HandleAddItem)
 	http.HandleFunc("/feed", srv.ServeFeed)
 	http.HandleFunc("/audio/youtube", srv.ServeYoutubeAudio)
+	http.HandleFunc("/favicon.ico", srv.ServeIcon)
 
 	log.Println("starting server on ", args.ListenAddr, "...")
 	if err := http.ListenAndServe(args.ListenAddr, nil); err != nil {

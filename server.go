@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andrewslotin/youcast/assets"
 	"github.com/eduncan911/podcast"
 )
 
@@ -85,6 +86,11 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/xml")
 	p.Encode(w)
+}
+
+func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Context-Type", "image/png")
+	w.Write(assets.Icon)
 }
 
 func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
