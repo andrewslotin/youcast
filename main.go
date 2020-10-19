@@ -9,7 +9,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-const DefaultDBPath = "youcast.db"
+const DefaultDBPath = "feed.db"
 
 var args struct {
 	ListenAddr string
@@ -40,8 +40,8 @@ func main() {
 	}
 
 	srv := NewFeedServer(PodcastMetadata{
-		Title:       "LaterTube",
-		Description: "YouTube audio as a podcast",
+		Title:       "Listen Later",
+		Description: "These videos could have been a podcast...",
 	}, newBoltStorage("feed", db))
 
 	http.HandleFunc("/", srv.HandleAddItem)
