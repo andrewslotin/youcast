@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"net/url"
@@ -30,6 +31,43 @@ type FeedServer struct {
 
 func NewFeedServer(meta PodcastMetadata, st Storage) *FeedServer {
 	return &FeedServer{st: st, meta: meta}
+}
+
+var indexTemplate = template.Must(template.New("index").Parse(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ .Title }} - listen videos later</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>{{ .Title }}</h1>
+      </header>
+      <div class="row">
+        Drag &amp; drop this bookmarklet to your favorites bar.
+      </div>
+      <div class="row">
+        <a class="btn" href="javascript:(function(){window.location='https://{{ .Host }}/?url='+encodeURIComponent(window.location);})();">Listen later</a>
+      </div>
+      <div class="row">
+        Click it while on YouTube video page to add its audio version to your personal podcast.
+      </div>
+    </div>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  </body>
+</html>
+`))
+
+func (srv *FeedServer) ServeIndex(w http.ResponseWriter, req *http.Request) {
+	if err := indexTemplate.Execute(w, struct {
+		Host, Title string
+	}{req.Host, srv.meta.Title}); err != nil {
+		log.Printf("failed to render index template: %s", err)
+	}
 }
 
 func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
@@ -98,7 +136,7 @@ func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
 func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 	u := req.FormValue("url")
 	if u == "" {
-		http.Error(w, "missing url=<youtubeURL> parameter", http.StatusBadRequest)
+		srv.ServeIndex(w, req)
 		return
 	}
 
