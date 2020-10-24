@@ -93,7 +93,7 @@ var indexTemplate = template.Must(template.New("index").Parse(`
         Drag &amp; drop this bookmarklet to your favorites bar.
       </div>
       <div class="row">
-        <a class="btn" href="javascript:(function(){window.location='https://{{ .Host }}/?url='+encodeURIComponent(window.location);})();">Listen later</a>
+        <a class="btn" href="javascript:(function(){window.location='https://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen later</a>
       </div>
       <div class="row">
         Click it while on YouTube video page to add its audio version to your personal podcast.
