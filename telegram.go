@@ -34,26 +34,29 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 		Message *tgbotapi.Message `json:"message"`
 	}{&msg}); err != nil {
 		log.Printf("failed to unmarshal telegram message: %s", err)
+		tg.sendResponse(msg, "Could not add this item: Telegram sent nonsense")
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+
 		return nil
 	}
 
 	if msg.Audio == nil {
+		tg.sendResponse(msg, "Could not add this item: there is no audio")
 		w.WriteHeader(http.StatusNoContent)
+
 		return nil
 	}
 
 	u, err := tg.api.GetFileDirectURL(msg.Audio.FileID)
 	if err != nil {
 		log.Printf("failed to fetch telegram audio url: %s", err)
+		tg.sendResponse(msg, "Could not add this item: "+err.Error())
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
 		return nil
 	}
 
-	resp := tgbotapi.NewMessage(msg.Chat.ID, u)
-	resp.ReplyToMessageID = msg.MessageID
-	if _, err := tg.api.Send(resp); err != nil {
-		log.Printf("failed to respond to %s: %s", msg.From.UserName, err)
-	}
+	tg.sendResponse(msg, u)
 
 	if msg.Audio.Performer == "" {
 		user := msg.ForwardFrom
@@ -72,6 +75,15 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 		Audio:       msg.Audio,
 		Description: msg.Caption,
 		FileURL:     u,
+	}
+}
+
+func (tg *TelegramProvider) sendResponse(msg tgbotapi.Message, text string) {
+	resp := tgbotapi.NewMessage(msg.Chat.ID, text)
+	resp.ReplyToMessageID = msg.MessageID
+
+	if _, err := tg.api.Send(resp); err != nil {
+		log.Printf("failed to respond to %s: %s", msg.From.UserName, err)
 	}
 }
 
