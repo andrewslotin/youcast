@@ -46,6 +46,15 @@ func main() {
 
 	srv.RegisterProvider("/yt", &YouTubeProvider{})
 
+	if token, ok := os.LookupEnv("TELEGRAM_API_TOKEN"); ok {
+		p, err := NewTelegramProvider(token)
+		if err != nil {
+			log.Printf("failed to initialize telegram provider: %s", err)
+		} else {
+			srv.RegisterProvider("/tg", p)
+		}
+	}
+
 	log.Println("starting server on ", args.ListenAddr, "...")
 	if err := http.ListenAndServe(args.ListenAddr, srv.ServeMux()); err != nil {
 		log.Fatalln(err)

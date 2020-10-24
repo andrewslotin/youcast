@@ -13,6 +13,7 @@ type PodcastItemType uint8
 
 const (
 	YouTubeItem PodcastItemType = iota + 1
+	TelegramItem
 )
 
 type PodcastItem struct {

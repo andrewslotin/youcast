@@ -155,11 +155,20 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 			Link:        it.OriginalURL,
 			PubDate:     &it.AddedAt,
 		}
-		item.AddEnclosure(
-			scheme+"://"+req.Host+"/audio/youtube?v="+id,
-			mimeTypeToEnclosureType(it.MIMEType),
-			int64(it.ContentLength),
-		)
+		switch it.Type {
+		case YouTubeItem:
+			item.AddEnclosure(
+				scheme+"://"+req.Host+"/audio/youtube?v="+id,
+				mimeTypeToEnclosureType(it.MIMEType),
+				int64(it.ContentLength),
+			)
+		default:
+			item.AddEnclosure(
+				it.OriginalURL,
+				mimeTypeToEnclosureType(it.MIMEType),
+				int64(it.ContentLength),
+			)
+		}
 
 		if _, err := p.AddItem(item); err != nil {
 			log.Printf("failed to add %s: %s", it.OriginalURL, err)
