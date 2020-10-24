@@ -44,13 +44,10 @@ func main() {
 		Description: "These videos could have been a podcast...",
 	}, newBoltStorage("feed", db))
 
-	http.HandleFunc("/", srv.HandleAddItem)
-	http.HandleFunc("/feed", srv.ServeFeed)
-	http.HandleFunc("/audio/youtube", srv.ServeYoutubeAudio)
-	http.HandleFunc("/favicon.ico", srv.ServeIcon)
+	srv.RegisterProvider("/yt", &YouTubeProvider{})
 
 	log.Println("starting server on ", args.ListenAddr, "...")
-	if err := http.ListenAndServe(args.ListenAddr, nil); err != nil {
+	if err := http.ListenAndServe(args.ListenAddr, srv.ServeMux()); err != nil {
 		log.Fatalln(err)
 	}
 }

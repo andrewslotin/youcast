@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"html/template"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -24,13 +23,44 @@ type PodcastMetadata struct {
 	Description string
 }
 
+type audioSource interface {
+	Metadata(context.Context) (Metadata, error)
+	AudioStreamURL(context.Context) (string, error)
+}
+
+type audioSourceProvider interface {
+	Name() string
+	HandleRequest(http.ResponseWriter, *http.Request) audioSource
+}
+
 type FeedServer struct {
-	st   Storage
-	meta PodcastMetadata
+	st        Storage
+	meta      PodcastMetadata
+	providers map[string]audioSourceProvider
 }
 
 func NewFeedServer(meta PodcastMetadata, st Storage) *FeedServer {
-	return &FeedServer{st: st, meta: meta}
+	return &FeedServer{
+		st:        st,
+		meta:      meta,
+		providers: make(map[string]audioSourceProvider),
+	}
+}
+
+func (srv *FeedServer) ServeMux() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", srv.ServeIndex)
+	mux.HandleFunc("/add/", srv.HandleAddItem)
+	mux.HandleFunc("/feed", srv.ServeFeed)
+	mux.HandleFunc("/audio/youtube", srv.ServeYoutubeAudio)
+	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
+
+	return mux
+}
+
+func (srv *FeedServer) RegisterProvider(subPath string, p audioSourceProvider) {
+	srv.providers[subPath] = p
 }
 
 var indexTemplate = template.Must(template.New("index").Parse(`
@@ -134,46 +164,41 @@ func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
 }
 
 func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
-	u := req.FormValue("url")
-	if u == "" {
-		srv.ServeIndex(w, req)
+	p, ok := srv.providers[strings.TrimPrefix(req.URL.Path, "/add")]
+	if !ok {
+		http.NotFound(w, req)
 		return
 	}
 
-	id, err := extractYouTubeID(u)
-	if err != nil {
-		http.Error(w, "unable to parse YouTube URL: "+err.Error(), http.StatusBadRequest)
+	audio := p.HandleRequest(w, req)
+	if audio == nil {
 		return
 	}
 
-	meta, err := NewYouTubeVideo(id).Metadata(req.Context())
-	if err != nil {
-		if err == ErrNoAudio {
-			http.Error(w, "no audio found for "+u, http.StatusNotFound)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		meta, err := audio.Metadata(ctx)
+		if err != nil {
+			log.Printf("failed to fetch %s data: %s", p.Name(), err)
 			return
 		}
 
-		log.Println("failed to fetch YouTube video data:", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	if err := srv.st.Add(PodcastItem{
-		Type:          YouTubeItem,
-		Title:         meta.Title,
-		Author:        meta.Author,
-		OriginalURL:   meta.Link,
-		Duration:      meta.Duration,
-		MIMEType:      meta.MIMEType,
-		ContentLength: meta.ContentLength,
-		AddedAt:       time.Now(),
-	}); err != nil {
-		log.Println("failed to add YouTube video to the feed:", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, req, u, http.StatusSeeOther)
+		if err := srv.st.Add(PodcastItem{
+			Type:          YouTubeItem,
+			Title:         meta.Title,
+			Author:        meta.Author,
+			OriginalURL:   meta.Link,
+			Duration:      meta.Duration,
+			MIMEType:      meta.MIMEType,
+			ContentLength: meta.ContentLength,
+			AddedAt:       time.Now(),
+		}); err != nil {
+			log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
+			return
+		}
+	}()
 }
 
 func (srv *FeedServer) ServeYoutubeAudio(w http.ResponseWriter, req *http.Request) {
@@ -207,18 +232,4 @@ func mimeTypeToEnclosureType(mime string) podcast.EnclosureType {
 	default:
 		return podcast.MP3
 	}
-}
-
-func extractYouTubeID(s string) (string, error) {
-	u, err := url.Parse(s)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse YouTube link: %w", err)
-	}
-
-	id := u.Query().Get("v")
-	if id == "" {
-		return "", fmt.Errorf("unsupported YouTube link %s", s)
-	}
-
-	return id, nil
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +32,44 @@ type Metadata struct {
 	Duration      time.Duration
 	MIMEType      string
 	ContentLength int64
+}
+
+type YouTubeProvider struct{}
+
+func (yt *YouTubeProvider) Name() string {
+	return "YouTube video"
+}
+
+func (yt *YouTubeProvider) HandleRequest(w http.ResponseWriter, req *http.Request) audioSource {
+	u := req.FormValue("url")
+	if u == "" {
+		http.Error(w, "missing url= parameter", http.StatusBadRequest)
+		return nil
+	}
+
+	id, err := extractYouTubeID(u)
+	if err != nil {
+		http.Error(w, "failed to parse YouTube video URL: "+err.Error(), http.StatusBadRequest)
+		return nil
+	}
+
+	http.Redirect(w, req, u, http.StatusSeeOther)
+
+	return NewYouTubeVideo(id)
+}
+
+func extractYouTubeID(s string) (string, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse YouTube link: %w", err)
+	}
+
+	id := u.Query().Get("v")
+	if id == "" {
+		return "", fmt.Errorf("unsupported YouTube link %s", s)
+	}
+
+	return id, nil
 }
 
 func NewYouTubeVideo(videoID string) *YouTubeVideo {
