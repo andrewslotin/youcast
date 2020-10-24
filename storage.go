@@ -18,6 +18,7 @@ const (
 type PodcastItem struct {
 	Type          PodcastItemType
 	Title         string
+	Description   string
 	Author        string
 	OriginalURL   string
 	Duration      time.Duration
@@ -54,6 +55,7 @@ type boltPodcastItem struct {
 	Type          PodcastItemType `json:",omitempty"`
 	Title         string          `json:",omitempty"`
 	Author        string          `json:",omitempty"`
+	Description   string          `json:",omitempty"`
 	OriginalURL   string          `json:",omitempty"`
 	Duration      time.Duration   `json:",omitempty"`
 	MIMEType      string          `json:",omitempty"`
@@ -65,6 +67,7 @@ func newBoltPodcastItem(item PodcastItem) boltPodcastItem {
 		item.Type,
 		item.Title,
 		item.Author,
+		item.Description,
 		item.OriginalURL,
 		item.Duration,
 		item.MIMEType,
@@ -126,6 +129,7 @@ func (s *boltStorage) Items() ([]PodcastItem, error) {
 				item.Type,
 				item.Title,
 				item.Author,
+				item.Description,
 				item.OriginalURL,
 				item.Duration,
 				item.MIMEType,

@@ -23,6 +23,17 @@ type PodcastMetadata struct {
 	Description string
 }
 
+type Metadata struct {
+	Type          PodcastItemType
+	OriginalURL   string
+	Title         string
+	Description   string
+	Author        string
+	Duration      time.Duration
+	MIMEType      string
+	ContentLength int64
+}
+
 type audioSource interface {
 	Metadata(context.Context) (Metadata, error)
 	AudioStreamURL(context.Context) (string, error)
@@ -60,6 +71,7 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 }
 
 func (srv *FeedServer) RegisterProvider(subPath string, p audioSourceProvider) {
+	log.Printf("requests sent to /add%s will be handled by %s provider", subPath, p.Name())
 	srv.providers[subPath] = p
 }
 
@@ -139,7 +151,7 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 				Name:  it.Author,
 				Email: "user@example.com",
 			},
-			Description: it.Title,
+			Description: it.Description,
 			Link:        it.OriginalURL,
 			PubDate:     &it.AddedAt,
 		}
@@ -186,10 +198,11 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if err := srv.st.Add(PodcastItem{
-			Type:          YouTubeItem,
+			Type:          meta.Type,
 			Title:         meta.Title,
 			Author:        meta.Author,
-			OriginalURL:   meta.Link,
+			Description:   meta.Description,
+			OriginalURL:   meta.OriginalURL,
 			Duration:      meta.Duration,
 			MIMEType:      meta.MIMEType,
 			ContentLength: meta.ContentLength,

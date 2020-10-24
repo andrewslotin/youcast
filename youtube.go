@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/kkdai/youtube/v2"
 )
@@ -23,15 +22,6 @@ type YouTubeVideo struct {
 	c       youtube.Client
 	videoID string
 	log     *log.Logger
-}
-
-type Metadata struct {
-	Link          string
-	Title         string
-	Author        string
-	Duration      time.Duration
-	MIMEType      string
-	ContentLength int64
 }
 
 type YouTubeProvider struct{}
@@ -99,9 +89,11 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 	}
 
 	return Metadata{
-		Link:          "https://www.youtube.com/watch?v=" + y.videoID,
+		Type:          YouTubeItem,
+		OriginalURL:   "https://www.youtube.com/watch?v=" + y.videoID,
 		Title:         video.Title,
 		Author:        video.Author,
+		Description:   video.Title,
 		Duration:      video.Duration,
 		MIMEType:      bestAudio.MimeType,
 		ContentLength: cl,
