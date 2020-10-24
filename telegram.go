@@ -35,7 +35,7 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 	}{&msg}); err != nil {
 		log.Printf("failed to unmarshal telegram message: %s", err)
 		tg.sendResponse(msg, "Could not add this item: Telegram sent nonsense")
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		w.WriteHeader(http.StatusNoContent)
 
 		return nil
 	}
@@ -51,7 +51,7 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 	if err != nil {
 		log.Printf("failed to fetch telegram audio url: %s", err)
 		tg.sendResponse(msg, "Could not add this item: "+err.Error())
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusNoContent)
 
 		return nil
 	}
