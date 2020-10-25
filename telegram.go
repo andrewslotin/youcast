@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -15,8 +16,16 @@ type TelegramProvider struct {
 	api *tgbotapi.BotAPI
 }
 
-func NewTelegramProvider(token string) (*TelegramProvider, error) {
-	api, err := tgbotapi.NewBotAPI(token)
+func NewTelegramProvider(token string, apiEndpoint string) (*TelegramProvider, error) {
+	if apiEndpoint == "" {
+		apiEndpoint = tgbotapi.APIEndpoint
+	}
+
+	if !strings.HasSuffix(apiEndpoint, "/bot%s/%s") {
+		apiEndpoint += "/bot%s/%s"
+	}
+
+	api, err := tgbotapi.NewBotAPIWithAPIEndpoint(token, apiEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize telegram api: %w", err)
 	}
@@ -41,9 +50,7 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 	}
 
 	if msg.Audio == nil {
-		tg.sendResponse(msg, "Could not add this item: there is no audio")
 		w.WriteHeader(http.StatusNoContent)
-
 		return nil
 	}
 
