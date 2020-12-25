@@ -14,13 +14,15 @@ import (
 const DefaultDBPath = "feed.db"
 
 var args struct {
-	ListenAddr string
-	DBPath     string
+	ListenAddr  string
+	DBPath      string
+	StoragePath string
 }
 
 func main() {
 	flag.StringVar(&args.ListenAddr, "l", os.Getenv("LISTEN_ADDR"), "Listen address")
 	flag.StringVar(&args.DBPath, "db", os.Getenv("DB_PATH"), "Path to the database")
+	flag.StringVar(&args.StoragePath, "storage-dir", os.Getenv("STORAGE_PATH"), "Path to the directory where to store downloaded files")
 	flag.Parse()
 
 	if p, ok := os.LookupEnv("PORT"); ok {
@@ -28,7 +30,7 @@ func main() {
 	}
 
 	if args.ListenAddr == "" {
-		log.Fatalln("missing listen address")
+		log.Fatalln("missing LISTEN_ADDR")
 	}
 
 	if args.DBPath == "" {
@@ -36,12 +38,16 @@ func main() {
 		args.DBPath = DefaultDBPath
 	}
 
+	if args.StoragePath == "" {
+		log.Fatalln("missing STORAGE_PATH")
+	}
+
 	db, err := bolt.Open(args.DBPath, 0600, nil)
 	if err != nil {
 		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
 	}
 
-	svc := NewFeedService(newBoltStorage("feed", db))
+	svc := NewFeedService(newBoltStorage("feed", db), args.StoragePath)
 	srv := NewFeedServer(PodcastMetadata{
 		Title:       "Listen Later",
 		Description: "These videos could have been a podcast...",
