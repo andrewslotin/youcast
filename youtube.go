@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net/http"
@@ -75,7 +74,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 		return Metadata{}, fmt.Errorf("failed to get video info: %w", err)
 	}
 
-	bestAudio, err := pickBestAudio(video.Formats)
+	u, bestAudio, err := y.AudioStreamURL(ctx)
 	if err != nil {
 		return Metadata{}, fmt.Errorf("failed to find audio: %w", err)
 	}
@@ -90,7 +89,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 
 	return Metadata{
 		Type:          YouTubeItem,
-		OriginalURL:   "https://www.youtube.com/watch?v=" + y.videoID,
+		OriginalURL:   u,
 		Title:         video.Title,
 		Author:        video.Author,
 		Description:   video.Title,
@@ -100,44 +99,23 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 	}, nil
 }
 
-func (y *YouTubeVideo) AudioStream(ctx context.Context) (io.ReadCloser, http.Header, error) {
+func (y *YouTubeVideo) AudioStreamURL(ctx context.Context) (string, youtube.Format, error) {
 	video, err := y.c.GetVideoContext(ctx, y.videoID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get video info: %w", err)
+		return "", youtube.Format{}, fmt.Errorf("failed to get video info: %w", err)
 	}
 
 	bestAudio, err := pickBestAudio(video.Formats)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to find audio: %w", err)
-	}
-
-	y.log.Printf("found %s stream for %s @ %d bps", bestAudio.MimeType, y.videoID, bestAudio.Bitrate)
-
-	resp, err := y.c.GetStreamContext(ctx, video, &bestAudio)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch %s stream: %w", bestAudio.MimeType, err)
-	}
-
-	return resp.Body, resp.Header, nil
-}
-
-func (y *YouTubeVideo) AudioStreamURL(ctx context.Context) (string, error) {
-	video, err := y.c.GetVideoContext(ctx, y.videoID)
-	if err != nil {
-		return "", fmt.Errorf("failed to get video info: %w", err)
-	}
-
-	bestAudio, err := pickBestAudio(video.Formats)
-	if err != nil {
-		return "", fmt.Errorf("failed to find audio: %w", err)
+		return "", youtube.Format{}, fmt.Errorf("failed to find audio: %w", err)
 	}
 
 	u, err := y.c.GetStreamURLContext(ctx, video, &bestAudio)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch %s stream: %w", bestAudio.MimeType, err)
+		return "", youtube.Format{}, fmt.Errorf("failed to fetch %s stream: %w", bestAudio.MimeType, err)
 	}
 
-	return u, nil
+	return u, bestAudio, nil
 }
 
 func pickBestAudio(formats youtube.FormatList) (youtube.Format, error) {

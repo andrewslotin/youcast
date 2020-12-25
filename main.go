@@ -73,7 +73,7 @@ func main() {
 							continue
 						}
 
-						if err := svc.AddItem(NewPodcastItem(meta, time.Now()), audio.FileURL); err != nil {
+						if err := svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
 							log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 							continue
 						}

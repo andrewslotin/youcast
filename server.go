@@ -31,7 +31,6 @@ type Metadata struct {
 
 type audioSource interface {
 	Metadata(context.Context) (Metadata, error)
-	AudioStreamURL(context.Context) (string, error)
 }
 
 type audioSourceProvider interface {
@@ -59,8 +58,8 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux.HandleFunc("/", srv.ServeIndex)
 	mux.HandleFunc("/add/", srv.HandleAddItem)
 	mux.HandleFunc("/feed", srv.ServeFeed)
-	mux.HandleFunc("/audio/youtube", srv.ServeYoutubeAudio)
 	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
+	mux.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(srv.svc.storagePath))))
 
 	return mux
 }
@@ -88,7 +87,7 @@ var indexTemplate = template.Must(template.New("index").Parse(`
         Drag &amp; drop this bookmarklet to your favorites bar.
       </div>
       <div class="row">
-        <a class="btn" href="javascript:(function(){window.location='https://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen later</a>
+        <a class="btn" href="javascript:(function(){window.location='{{ .Scheme }}://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen later</a>
       </div>
       <div class="row">
         Click it while on YouTube video page to add its audio version to your personal podcast.
@@ -101,8 +100,8 @@ var indexTemplate = template.Must(template.New("index").Parse(`
 
 func (srv *FeedServer) ServeIndex(w http.ResponseWriter, req *http.Request) {
 	if err := indexTemplate.Execute(w, struct {
-		Host, Title string
-	}{req.Host, srv.meta.Title}); err != nil {
+		Scheme, Host, Title string
+	}{reqScheme(req), req.Host, srv.meta.Title}); err != nil {
 		log.Printf("failed to render index template: %s", err)
 	}
 }
@@ -120,10 +119,7 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 		pubDate = &items[len(items)-1].AddedAt
 	}
 
-	scheme := "http"
-	if req.TLS != nil {
-		scheme = "https"
-	}
+	scheme := reqScheme(req)
 
 	feedLink := srv.meta.Link
 	if feedLink == "" {
@@ -131,7 +127,7 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	}
 
 	p := podcast.New(srv.meta.Title, feedLink, srv.meta.Description, pubDate, nil)
-	p.AddImage("https://" + req.Host + "/favicon.ico")
+	p.AddImage(scheme + "://" + req.Host + "/favicon.ico")
 
 	for _, it := range items {
 		item := podcast.Item{
@@ -144,26 +140,13 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 			Link:        it.OriginalURL,
 			PubDate:     &it.AddedAt,
 		}
-		switch it.Type {
-		case YouTubeItem:
-			id, err := extractYouTubeID(it.OriginalURL)
-			if err != nil {
-				log.Printf("failed to extract YouTube video ID from %s: %s", it.OriginalURL, err)
-				continue
-			}
 
-			item.AddEnclosure(
-				scheme+"://"+req.Host+"/audio/youtube?v="+id,
-				mimeTypeToEnclosureType(it.MIMEType),
-				int64(it.ContentLength),
-			)
-		default:
-			item.AddEnclosure(
-				it.OriginalURL,
-				mimeTypeToEnclosureType(it.MIMEType),
-				int64(it.ContentLength),
-			)
+		u := it.OriginalURL
+		if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+			u = scheme + "://" + req.Host + it.OriginalURL
 		}
+
+		item.AddEnclosure(u, mimeTypeToEnclosureType(it.MIMEType), int64(it.ContentLength))
 
 		if _, err := p.AddItem(item); err != nil {
 			log.Printf("failed to add %s: %s", it.OriginalURL, err)
@@ -201,38 +184,19 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		audioURL, err := audio.AudioStreamURL(ctx)
-		if err != nil {
-			log.Printf("failed to fetch %s stream URL: %s", p.Name(), err)
-			return
-		}
-
-		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now()), audioURL); err != nil {
+		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
 			log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 			return
 		}
 	}()
 }
 
-func (srv *FeedServer) ServeYoutubeAudio(w http.ResponseWriter, req *http.Request) {
-	id := req.FormValue("v")
-	if id == "" {
-		http.Error(w, "missing v=<youtubeID> parameter", http.StatusBadRequest)
-		return
+func reqScheme(req *http.Request) string {
+	if req.TLS != nil {
+		return "https"
 	}
 
-	u, err := NewYouTubeVideo(id).AudioStreamURL(req.Context())
-	if err != nil {
-		if err == ErrNoAudio {
-			http.Error(w, "no audio found for "+id, http.StatusNotFound)
-			return
-		}
-
-		log.Println("failed to open YouTube video stream:", err)
-		return
-	}
-
-	http.Redirect(w, req, u, http.StatusSeeOther)
+	return "http"
 }
 
 func mimeTypeToEnclosureType(mime string) podcast.EnclosureType {

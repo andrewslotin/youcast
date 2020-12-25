@@ -34,13 +34,15 @@ func NewFeedService(st Storage, storagePath string, c *http.Client) *FeedService
 	}
 }
 
-func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
-	filename, written, err := s.downloadFile(context.Background(), audioURL)
+func (s *FeedService) AddItem(item PodcastItem) error {
+	log.Printf("downloading %s", item.OriginalURL)
+
+	filename, written, err := s.downloadFile(context.Background(), item.OriginalURL)
 	if err != nil {
 		return fmt.Errorf("failed to download item: %w", err)
 	}
 
-	log.Println("downloaded %s to %s (%d bytes written)", audioURL, filename, written)
+	log.Printf("downloaded %s to %s (%s written)", item.OriginalURL, filename, FileSize(written))
 	item.OriginalURL = "/downloads/" + filename
 
 	if err := s.st.Add(item); err != nil {
@@ -70,6 +72,10 @@ func (s *FeedService) downloadFile(ctx context.Context, u string) (string, int64
 		return "", 0, fmt.Errorf("failed to build a request to %s: %w", u, err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		return "", 0, fmt.Errorf("failed to download %s: server responded with %s", u, resp.Status)
+	}
 
 	fileName := path.Join(s.storagePath, fmt.Sprintf("%x", sha256.Sum256([]byte(u))))
 	fd, err := os.Create(fileName)
