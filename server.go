@@ -201,7 +201,13 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
+		audioURL, err := audio.AudioStreamURL(ctx)
+		if err != nil {
+			log.Printf("failed to fetch %s stream URL: %s", p.Name(), err)
+			return
+		}
+
+		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now()), audioURL); err != nil {
 			log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 			return
 		}

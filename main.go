@@ -47,7 +47,7 @@ func main() {
 		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
 	}
 
-	svc := NewFeedService(newBoltStorage("feed", db), args.StoragePath)
+	svc := NewFeedService(newBoltStorage("feed", db), args.StoragePath, nil)
 	srv := NewFeedServer(PodcastMetadata{
 		Title:       "Listen Later",
 		Description: "These videos could have been a podcast...",
@@ -66,14 +66,14 @@ func main() {
 				log.Printf("failed to start telegram updates consumption loop: %s", err)
 			} else {
 				go func() {
-					for src := range tgUpdates {
-						meta, err := src.Metadata(context.Background())
+					for audio := range tgUpdates {
+						meta, err := audio.Metadata(context.Background())
 						if err != nil {
 							log.Printf("failed to fetch %s data: %s", p.Name(), err)
 							continue
 						}
 
-						if err := svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
+						if err := svc.AddItem(NewPodcastItem(meta, time.Now()), audio.FileURL); err != nil {
 							log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 							continue
 						}
