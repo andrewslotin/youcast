@@ -12,11 +12,6 @@ import (
 	"github.com/eduncan911/podcast"
 )
 
-type Storage interface {
-	Add(PodcastItem) error
-	Items() ([]PodcastItem, error)
-}
-
 type PodcastMetadata struct {
 	Title       string
 	Link        string
@@ -45,14 +40,14 @@ type audioSourceProvider interface {
 }
 
 type FeedServer struct {
-	st        Storage
+	svc       *FeedService
 	meta      PodcastMetadata
 	providers map[string]audioSourceProvider
 }
 
-func NewFeedServer(meta PodcastMetadata, st Storage) *FeedServer {
+func NewFeedServer(meta PodcastMetadata, svc *FeedService) *FeedServer {
 	return &FeedServer{
-		st:        st,
+		svc:       svc,
 		meta:      meta,
 		providers: make(map[string]audioSourceProvider),
 	}
@@ -113,7 +108,7 @@ func (srv *FeedServer) ServeIndex(w http.ResponseWriter, req *http.Request) {
 }
 
 func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
-	items, err := srv.st.Items()
+	items, err := srv.svc.Items()
 	if err != nil {
 		log.Println("failed to fetch podcast items: ", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -206,7 +201,7 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if err := srv.st.Add(NewPodcastItem(meta, time.Now())); err != nil {
+		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
 			log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 			return
 		}

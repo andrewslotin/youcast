@@ -41,10 +41,11 @@ func main() {
 		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
 	}
 
+	svc := NewFeedService(newBoltStorage("feed", db))
 	srv := NewFeedServer(PodcastMetadata{
 		Title:       "Listen Later",
 		Description: "These videos could have been a podcast...",
-	}, newBoltStorage("feed", db))
+	}, svc)
 
 	srv.RegisterProvider("/yt", &YouTubeProvider{})
 
@@ -66,7 +67,7 @@ func main() {
 							continue
 						}
 
-						if err := srv.st.Add(NewPodcastItem(meta, time.Now())); err != nil {
+						if err := svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
 							log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 							continue
 						}
