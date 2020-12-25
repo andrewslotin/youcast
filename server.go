@@ -139,12 +139,6 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	p.AddImage("https://" + req.Host + "/favicon.ico")
 
 	for _, it := range items {
-		id, err := extractYouTubeID(it.OriginalURL)
-		if err != nil {
-			log.Printf("failed to extract YouTube video ID from %s: %s", it.OriginalURL, err)
-			continue
-		}
-
 		item := podcast.Item{
 			Title: it.Title,
 			Author: &podcast.Author{
@@ -157,6 +151,12 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 		}
 		switch it.Type {
 		case YouTubeItem:
+			id, err := extractYouTubeID(it.OriginalURL)
+			if err != nil {
+				log.Printf("failed to extract YouTube video ID from %s: %s", it.OriginalURL, err)
+				continue
+			}
+
 			item.AddEnclosure(
 				scheme+"://"+req.Host+"/audio/youtube?v="+id,
 				mimeTypeToEnclosureType(it.MIMEType),
@@ -206,17 +206,7 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if err := srv.st.Add(PodcastItem{
-			Type:          meta.Type,
-			Title:         meta.Title,
-			Author:        meta.Author,
-			Description:   meta.Description,
-			OriginalURL:   meta.OriginalURL,
-			Duration:      meta.Duration,
-			MIMEType:      meta.MIMEType,
-			ContentLength: meta.ContentLength,
-			AddedAt:       time.Now(),
-		}); err != nil {
+		if err := srv.st.Add(NewPodcastItem(meta, time.Now())); err != nil {
 			log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 			return
 		}

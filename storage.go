@@ -28,6 +28,20 @@ type PodcastItem struct {
 	AddedAt       time.Time
 }
 
+func NewPodcastItem(meta Metadata, addedAt time.Time) PodcastItem {
+	return PodcastItem{
+		Type:          meta.Type,
+		Title:         meta.Title,
+		Author:        meta.Author,
+		Description:   meta.Description,
+		OriginalURL:   meta.OriginalURL,
+		Duration:      meta.Duration,
+		MIMEType:      meta.MIMEType,
+		ContentLength: meta.ContentLength,
+		AddedAt:       addedAt,
+	}
+}
+
 type memoryStorage struct {
 	mu    sync.RWMutex
 	items []PodcastItem
