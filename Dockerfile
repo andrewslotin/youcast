@@ -3,6 +3,8 @@ FROM golang:latest AS builder
 ARG APP_USER=appuser
 ARG APP_UID
 
+RUN apt-get update && apt-get install -y mime-support
+
 RUN adduser \
         --disabled-password \
         --gecos "" \
@@ -29,6 +31,7 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
+COPY --from=builder /etc/mime.types /etc/mime.types
 
 USER $APP_USER:$APP_USER
 
