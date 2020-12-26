@@ -204,7 +204,7 @@ func (srv *FeedServer) ServeMedia(w http.ResponseWriter, req *http.Request) {
 	mimeType := "application/octet-stream"
 	if ind := strings.LastIndexByte(fileName, '.'); ind > -1 {
 		if typ := mime.TypeByExtension(fileName[ind:]); typ != "" {
-			mimeType = typ
+			mimeType = mimeTypeToEnclosureType(typ).String()
 		}
 	}
 
@@ -260,9 +260,9 @@ func reqScheme(req *http.Request) string {
 func mimeTypeToEnclosureType(mime string) podcast.EnclosureType {
 	kv := strings.SplitN(mime, ";", 2)
 	switch kv[0] {
-	case "audio/mp4":
+	case "audio/mp4", "audio/mp4a.20.2", "audio/x-m4a":
 		return podcast.M4A
-	case "video/mp4":
+	case "video/mp4", "video/x-m4v":
 		return podcast.M4V
 	default:
 		log.Printf("unknown MIME type %s, falling back to mp3", mime)
