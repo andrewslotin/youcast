@@ -99,28 +99,23 @@ func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessa
 		u = u1.String()
 	}
 
-	if msg.Audio.Performer == "" {
-		user := msg.ForwardFrom
-		if user == nil {
-			user = msg.From
-		}
+	var sender string
 
-		msg.Audio.Performer = "@" + user.UserName
+	switch {
+	case msg.ForwardFromChat != nil:
+		sender = msg.ForwardFromChat.Title
+	case msg.ForwardFrom != nil:
+		sender = msg.ForwardFrom.UserName
+	default:
+		sender = msg.From.UserName
 	}
 
 	if msg.Caption == "" {
-		var sender string
-
-		switch {
-		case msg.ForwardFromChat != nil:
-			sender = msg.ForwardFromChat.Title
-		case msg.ForwardFrom != nil:
-			sender = msg.ForwardFrom.UserName
-		default:
-			sender = msg.From.UserName
-		}
-
 		msg.Caption = fmt.Sprintf("Audio from %s submitted on %s", sender, time.Unix(int64(msg.Date), 0).Format("Jan, 02 15:04 MST"))
+	}
+
+	if msg.Audio.Performer == "" {
+		msg.Audio.Performer = sender
 	}
 
 	if msg.Audio.Title == "" {
