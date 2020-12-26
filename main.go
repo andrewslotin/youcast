@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -61,6 +63,17 @@ func main() {
 			log.Printf("failed to initialize telegram provider: %s", err)
 		} else {
 			srv.RegisterProvider("/tg", p)
+
+			for _, idStr := range strings.Split(os.Getenv("TELEGRAM_ALLOWED_USERS"), ",") {
+				id, err := strconv.Atoi(strings.TrimSpace(idStr))
+				if err != nil {
+					log.Printf("failed to whitelist user with id '%s': %s", idStr, err)
+					continue
+				}
+
+				p.WhitelistUser(id)
+			}
+
 			tgUpdates, err := p.Updates(context.Background())
 			if err != nil {
 				log.Printf("failed to start telegram updates consumption loop: %s", err)

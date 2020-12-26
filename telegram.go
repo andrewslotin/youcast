@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,9 +14,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
+var ErrUserNotAllowed = errors.New("user was not whitelisted")
+
 type TelegramProvider struct {
 	api             *tgbotapi.BotAPI
 	mediaServiceURL *url.URL
+	allowedUsers    map[int]struct{}
 }
 
 func NewTelegramProvider(token, apiEndpoint, mediaServiceURL string) (*TelegramProvider, error) {
@@ -32,7 +36,9 @@ func NewTelegramProvider(token, apiEndpoint, mediaServiceURL string) (*TelegramP
 		return nil, fmt.Errorf("failed to initialize telegram api: %w", err)
 	}
 
-	p := &TelegramProvider{api: api}
+	p := &TelegramProvider{
+		api: api,
+	}
 
 	if mediaServiceURL != "" {
 		u, err := url.Parse(mediaServiceURL)
@@ -44,6 +50,18 @@ func NewTelegramProvider(token, apiEndpoint, mediaServiceURL string) (*TelegramP
 	}
 
 	return p, nil
+}
+
+func (tg *TelegramProvider) WhitelistUser(id int) {
+	log.Printf("allowing user with id %d to send commands to bot", id)
+	if tg.allowedUsers != nil {
+		tg.allowedUsers[id] = struct{}{}
+		return
+	}
+
+	tg.allowedUsers = map[int]struct{}{
+		id: struct{}{},
+	}
 }
 
 func (tg *TelegramProvider) Name() string {
@@ -62,21 +80,26 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 		return nil
 	}
 
+	w.WriteHeader(http.StatusNoContent)
+
 	switch src, err := tg.HandleMessage(msg); err {
-	case ErrNoAudio:
-		w.WriteHeader(http.StatusNoContent)
+	case ErrUserNotAllowed, ErrNoAudio:
 		return nil
 	case nil:
-		w.WriteHeader(http.StatusNoContent)
 		return src
 	default:
 		tg.sendResponse(msg, "Could not add this item: "+err.Error(), true)
-		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
 }
 
 func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessage, error) {
+	if tg.allowedUsers != nil {
+		if _, ok := tg.allowedUsers[msg.From.ID]; !ok {
+			return nil, ErrUserNotAllowed
+		}
+	}
+
 	if msg.Audio == nil {
 		return nil, ErrNoAudio
 	}
@@ -146,6 +169,8 @@ func (tg *TelegramProvider) Updates(ctx context.Context) (<-chan *TelegramMessag
 			select {
 			case upd := <-updates:
 				switch src, err := tg.HandleMessage(upd.Message); err {
+				case ErrUserNotAllowed:
+					log.Printf("UNAUTHORIZED message from user %s (id:%d)", upd.Message.From.UserName, upd.Message.From.ID)
 				case ErrNoAudio:
 					log.Printf("incoming message from user %s (id:%d)", upd.Message.From.UserName, upd.Message.From.ID)
 					tg.HandleCommand(upd.Message)
@@ -169,9 +194,9 @@ func (tg *TelegramProvider) Updates(ctx context.Context) (<-chan *TelegramMessag
 func (tg *TelegramProvider) HandleCommand(msg *tgbotapi.Message) {
 	switch strings.ToLower(msg.Text) {
 	case "/start", "/help":
-		tg.sendResponse(nil, "Hello, I'm LaterCast bot! Just forward me audio files and I will add them to your feed.", false)
+		tg.sendResponse(msg, "Hello, I'm LaterCast bot! Just forward me audio files and I will add them to your feed.", false)
 	case "/status":
-		tg.sendResponse(nil, "Up and running!", false)
+		tg.sendResponse(msg, "Up and running!", false)
 	default:
 		tg.sendResponse(msg, "Unknown command, send /help", false)
 	}
