@@ -110,7 +110,18 @@ func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessa
 	}
 
 	if msg.Caption == "" {
-		msg.Caption = fmt.Sprintf("Audio from %s submitted on %s", msg.From.UserName, time.Unix(int64(msg.Date), 0))
+		var sender string
+
+		switch {
+		case msg.ForwardFromChat != nil:
+			sender = msg.ForwardFromChat.Title
+		case msg.ForwardFrom != nil:
+			sender = msg.ForwardFrom.UserName
+		default:
+			sender = msg.From.UserName
+		}
+
+		msg.Caption = fmt.Sprintf("Audio from %s submitted on %s", sender, time.Unix(int64(msg.Date), 0).Format("Jan, 02 15:04 MST"))
 	}
 
 	if msg.Audio.Title == "" {
