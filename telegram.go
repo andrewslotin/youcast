@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -13,10 +14,11 @@ import (
 )
 
 type TelegramProvider struct {
-	api *tgbotapi.BotAPI
+	api             *tgbotapi.BotAPI
+	mediaServiceURL *url.URL
 }
 
-func NewTelegramProvider(token string, apiEndpoint string) (*TelegramProvider, error) {
+func NewTelegramProvider(token, apiEndpoint, mediaServiceURL string) (*TelegramProvider, error) {
 	if apiEndpoint == "" {
 		apiEndpoint = tgbotapi.APIEndpoint
 	}
@@ -30,7 +32,18 @@ func NewTelegramProvider(token string, apiEndpoint string) (*TelegramProvider, e
 		return nil, fmt.Errorf("failed to initialize telegram api: %w", err)
 	}
 
-	return &TelegramProvider{api: api}, nil
+	p := &TelegramProvider{api: api}
+
+	if mediaServiceURL != "" {
+		u, err := url.Parse(mediaServiceURL)
+		if err != nil {
+			return nil, fmt.Errorf("malformed media service URL %s: %w", mediaServiceURL, err)
+		}
+
+		p.mediaServiceURL = u
+	}
+
+	return p, nil
 }
 
 func (tg *TelegramProvider) Name() string {
@@ -73,6 +86,18 @@ func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessa
 	if err != nil {
 		log.Printf("failed to fetch telegram audio url: %s", err)
 		return nil, fmt.Errorf("failed to fetch file URL: %w", err)
+	}
+
+	if tg.mediaServiceURL != nil {
+		u1, err := url.Parse(u)
+		if err != nil {
+			return nil, fmt.Errorf("telegram api returned malformed download url %s: %w", u, err)
+		}
+
+		u1.Scheme = tg.mediaServiceURL.Scheme
+		u1.Host = tg.mediaServiceURL.Host
+
+		u = u1.String()
 	}
 
 	if msg.Audio.Performer == "" {

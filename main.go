@@ -56,7 +56,7 @@ func main() {
 	srv.RegisterProvider("/yt", &YouTubeProvider{})
 
 	if token, ok := os.LookupEnv("TELEGRAM_API_TOKEN"); ok {
-		p, err := NewTelegramProvider(token, os.Getenv("TELEGRAM_API_ENDPOINT"))
+		p, err := NewTelegramProvider(token, os.Getenv("TELEGRAM_API_ENDPOINT"), os.Getenv("TELEGRAM_FILE_SERVER"))
 		if err != nil {
 			log.Printf("failed to initialize telegram provider: %s", err)
 		} else {
