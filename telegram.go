@@ -56,7 +56,7 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 		Message *tgbotapi.Message `json:"message"`
 	}{msg}); err != nil {
 		log.Printf("failed to unmarshal telegram message: %s", err)
-		tg.sendResponse(msg, "Could not add this item: Telegram sent nonsense")
+		tg.sendResponse(msg, "Could not add this item: Telegram sent nonsense", true)
 		w.WriteHeader(http.StatusNoContent)
 
 		return nil
@@ -67,11 +67,10 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	case nil:
-		tg.sendResponse(msg, fmt.Sprintf(`Added "%s" to your feed`, src.Audio.Title))
 		w.WriteHeader(http.StatusNoContent)
 		return src
 	default:
-		tg.sendResponse(msg, "Could not add this item: "+err.Error())
+		tg.sendResponse(msg, "Could not add this item: "+err.Error(), true)
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
@@ -153,14 +152,14 @@ func (tg *TelegramProvider) Updates(ctx context.Context) (<-chan *TelegramMessag
 			case upd := <-updates:
 				switch src, err := tg.HandleMessage(upd.Message); err {
 				case ErrNoAudio:
-					log.Printf("no audio found in update %d", upd.UpdateID)
-					tg.sendResponse(upd.Message, "This message does not seem to have any audio attached")
+					log.Printf("incoming message from user %s (id:%d)", upd.Message.From.UserName, upd.Message.From.ID)
+					tg.HandleCommand(upd.Message)
 				case nil:
 					res <- src
-					tg.sendResponse(upd.Message, fmt.Sprintf(`Added "%s" to your feed`, src.Audio.Title))
+					tg.sendResponse(upd.Message, fmt.Sprintf(`Will add "%s" to your feed`, src.Audio.Title), true)
 				default:
 					log.Printf("failed to handle Telegram update: %s", err)
-					tg.sendResponse(upd.Message, "Could not add this item: "+err.Error())
+					tg.sendResponse(upd.Message, "Could not add this item: "+err.Error(), true)
 				}
 			case <-ctx.Done():
 				log.Println("context cancelled, shutting down Telegram provider")
@@ -172,14 +171,25 @@ func (tg *TelegramProvider) Updates(ctx context.Context) (<-chan *TelegramMessag
 	return res, nil
 }
 
-func (tg *TelegramProvider) sendResponse(msg *tgbotapi.Message, text string) {
+func (tg *TelegramProvider) HandleCommand(msg *tgbotapi.Message) {
+	switch strings.ToLower(msg.Text) {
+	case "/start", "/help":
+		tg.sendResponse(nil, "Hello, I'm LaterCast bot! Just forward me audio files and I will add them to your feed.", false)
+	case "/status":
+		tg.sendResponse(nil, "Up and running!", false)
+	default:
+		tg.sendResponse(msg, "Unknown command, send /help", false)
+	}
+}
+
+func (tg *TelegramProvider) sendResponse(msg *tgbotapi.Message, text string, quoteSrc bool) {
 	resp := tgbotapi.NewMessage(msg.Chat.ID, text)
-	if msg != nil {
+	if quoteSrc {
 		resp.ReplyToMessageID = msg.MessageID
 	}
 
 	if _, err := tg.api.Send(resp); err != nil {
-		log.Printf("failed to respond to %s: %s", msg.From.UserName, err)
+		log.Printf("failed to send response: %s", err)
 	}
 }
 
