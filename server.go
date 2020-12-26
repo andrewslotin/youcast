@@ -99,6 +99,12 @@ var indexTemplate = template.Must(template.New("index").Parse(`
       <div class="row">
         Click it while on YouTube video page to add its audio version to your personal podcast.
       </div>
+      <div class="row">
+        And by the way, here is a button to subscribe to it. In case it did not work, use this link: <code class="language-markup">{{ .Scheme }}://{{ .Host }}/feed</code>.
+      </div>
+      <div class="row">
+        <a class="waves-effect waves-light red btn" href="podcast://{{ .Host }}/feed"><i class="material-icons left">rss_feed</i>Subscribe</a>
+      </div>
     </div>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   </body>
