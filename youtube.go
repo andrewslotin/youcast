@@ -74,7 +74,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 		return Metadata{}, fmt.Errorf("failed to get video info: %w", err)
 	}
 
-	u, bestAudio, err := y.AudioStreamURL(ctx)
+	_, bestAudio, err := y.bestAudio(ctx)
 	if err != nil {
 		return Metadata{}, fmt.Errorf("failed to find audio: %w", err)
 	}
@@ -89,7 +89,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 
 	return Metadata{
 		Type:          YouTubeItem,
-		OriginalURL:   u,
+		OriginalURL:   "https://youtube.com/watch?v=" + y.videoID,
 		Title:         video.Title,
 		Author:        video.Author,
 		Description:   video.Title,
@@ -99,7 +99,12 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 	}, nil
 }
 
-func (y *YouTubeVideo) AudioStreamURL(ctx context.Context) (string, youtube.Format, error) {
+func (y *YouTubeVideo) DownloadURL(ctx context.Context) (string, error) {
+	u, _, err := y.bestAudio(ctx)
+	return u, err
+}
+
+func (y *YouTubeVideo) bestAudio(ctx context.Context) (string, youtube.Format, error) {
 	video, err := y.c.GetVideoContext(ctx, y.videoID)
 	if err != nil {
 		return "", youtube.Format{}, fmt.Errorf("failed to get video info: %w", err)

@@ -73,7 +73,13 @@ func main() {
 							continue
 						}
 
-						if err := svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
+						u, err := audio.DownloadURL(context.Background())
+						if err != nil {
+							log.Printf("failed to fetch download URL for %s: %s", p.Name(), err)
+							continue
+						}
+
+						if err := svc.AddItem(NewPodcastItem(meta, time.Now()), u); err != nil {
 							log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 							continue
 						}

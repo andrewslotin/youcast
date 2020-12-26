@@ -3,8 +3,13 @@ package main
 import (
 	"context"
 	"html/template"
+	"io"
 	"log"
+	"mime"
 	"net/http"
+	"os"
+	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +36,7 @@ type Metadata struct {
 
 type audioSource interface {
 	Metadata(context.Context) (Metadata, error)
+	DownloadURL(context.Context) (string, error)
 }
 
 type audioSourceProvider interface {
@@ -59,7 +65,8 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux.HandleFunc("/add/", srv.HandleAddItem)
 	mux.HandleFunc("/feed", srv.ServeFeed)
 	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
-	mux.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(srv.svc.storagePath))))
+	//mux.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(srv.svc.storagePath))))
+	mux.HandleFunc("/downloads/", srv.ServeMedia)
 
 	return mux
 }
@@ -141,9 +148,9 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 			PubDate:     &it.AddedAt,
 		}
 
-		u := it.OriginalURL
+		u := it.MediaURL
 		if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
-			u = scheme + "://" + req.Host + it.OriginalURL
+			u = scheme + "://" + req.Host + it.MediaURL
 		}
 
 		item.AddEnclosure(u, mimeTypeToEnclosureType(it.MIMEType), int64(it.ContentLength))
@@ -158,8 +165,47 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 }
 
 func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Context-Type", "image/png")
+	w.Header().Set("Content-Type", "image/png")
 	w.Write(assets.Icon)
+}
+
+func (srv *FeedServer) ServeMedia(w http.ResponseWriter, req *http.Request) {
+	fileName := path.Base(req.URL.Path)
+	filePath := path.Join(srv.svc.storagePath, fileName)
+
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		log.Printf("failed to stat %s: %s", filePath, err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+		return
+	}
+
+	fd, err := os.Open(filePath)
+	if err != nil {
+		log.Printf("failed to read %s: %s", filePath, err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
+		return
+	}
+	defer fd.Close()
+
+	mimeType := "application/octet-stream"
+	if ind := strings.LastIndexByte(fileName, '.'); ind > -1 {
+		if typ := mime.TypeByExtension(fileName[ind:]); typ != "" {
+			mimeType = typ
+		}
+	}
+
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Content-Size", strconv.FormatInt(fi.Size(), 10))
+
+	io.Copy(w, fd)
 }
 
 func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
@@ -184,7 +230,13 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now())); err != nil {
+		u, err := audio.DownloadURL(ctx)
+		if err != nil {
+			log.Printf("failed to fetch download URL for %s: %s", p.Name(), err)
+			return
+		}
+
+		if err := srv.svc.AddItem(NewPodcastItem(meta, time.Now()), u); err != nil {
 			log.Printf("failed to add %s item to the feed: %s", p.Name(), err)
 			return
 		}

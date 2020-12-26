@@ -166,6 +166,6 @@ func (tg *TelegramMessage) Metadata(ctx context.Context) (Metadata, error) {
 	}, nil
 }
 
-func (tg *TelegramMessage) AudioStreamURL(ctx context.Context) (string, error) {
+func (tg *TelegramMessage) DownloadURL(context.Context) (string, error) {
 	return tg.FileURL, nil
 }
