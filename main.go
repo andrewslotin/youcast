@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"log"
-	"mime"
 	"net/http"
 	"os"
 	"time"
@@ -46,10 +45,6 @@ func main() {
 	db, err := bolt.Open(args.DBPath, 0600, nil)
 	if err != nil {
 		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
-	}
-
-	if err := mime.AddExtensionType(".mp3", "audio/mpeg"); err != nil {
-		log.Printf("failed to register .mp3 MIME type: %s", err)
 	}
 
 	svc := NewFeedService(newBoltStorage("feed", db), args.StoragePath, nil)
