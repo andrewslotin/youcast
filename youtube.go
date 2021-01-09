@@ -87,6 +87,11 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 		cl = int64(math.Ceil(float64(bestAudio.Bitrate) * video.Duration.Seconds()))
 	}
 
+	mimeType := bestAudio.MimeType
+	if ind := strings.IndexByte(mimeType, ';'); ind >= 0 {
+		mimeType = mimeType[:ind]
+	}
+
 	return Metadata{
 		Type:          YouTubeItem,
 		OriginalURL:   "https://youtube.com/watch?v=" + y.videoID,
@@ -94,7 +99,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 		Author:        video.Author,
 		Description:   video.Title,
 		Duration:      video.Duration,
-		MIMEType:      bestAudio.MimeType,
+		MIMEType:      mimeType,
 		ContentLength: cl,
 	}, nil
 }
