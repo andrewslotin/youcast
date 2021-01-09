@@ -264,6 +264,8 @@ func mimeTypeToEnclosureType(mime string) podcast.EnclosureType {
 		return podcast.M4A
 	case "video/mp4", "video/x-m4v":
 		return podcast.M4V
+	case "audio/mpeg":
+		return podcast.MP3
 	default:
 		log.Printf("unknown MIME type %s, falling back to mp3", mime)
 		return podcast.MP3
