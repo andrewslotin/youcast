@@ -6,8 +6,8 @@ import (
 )
 
 var mimeTypes = map[string]string{
-	"audio/mpeg":      ".mp3",
-	"audio/mp4a.20.2": ".m4a",
+	"audio/mpeg": ".mp3",
+	"audio/mp4":  ".m4a",
 }
 
 func init() {
