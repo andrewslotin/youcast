@@ -146,8 +146,8 @@ func (s *boltStorage) Items() ([]PodcastItem, error) {
 			items = append(items, PodcastItem{
 				item.Type,
 				item.Title,
-				item.Author,
 				item.Description,
+				item.Author,
 				item.OriginalURL,
 				item.MediaURL,
 				item.Duration,
