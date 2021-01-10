@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -145,9 +147,28 @@ func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessa
 		msg.Audio.Title = msg.Caption
 	}
 
+	var linkURL string
+	switch {
+	case msg.ForwardFromChat != nil:
+		if chatID := strconv.FormatInt(msg.ForwardFromChat.ID, 10); len(chatID) > 4 {
+			linkURL = path.Join("https://t.me/c", chatID[4:], strconv.Itoa(msg.MessageID))
+		} else {
+			log.Println("unexpected telegram chat ID:", msg.Chat.ID)
+		}
+	case msg.Chat.IsChannel():
+		linkURL = path.Join("https://t.me", msg.Chat.UserName, strconv.Itoa(msg.MessageID))
+	case msg.Chat.IsSuperGroup():
+		if chatID := strconv.FormatInt(msg.Chat.ID, 10); len(chatID) > 4 {
+			linkURL = path.Join("https://t.me/c", chatID[4:], strconv.Itoa(msg.MessageID))
+		} else {
+			log.Println("unexpected telegram chat ID:", msg.Chat.ID)
+		}
+	}
+
 	return &TelegramMessage{
 		Audio:       msg.Audio,
 		Description: msg.Caption,
+		Link:        linkURL,
 		FileURL:     u,
 	}, nil
 }
@@ -216,13 +237,14 @@ func (tg *TelegramProvider) sendResponse(msg *tgbotapi.Message, text string, quo
 type TelegramMessage struct {
 	Audio       *tgbotapi.Audio
 	Description string
+	Link        string
 	FileURL     string
 }
 
 func (tg *TelegramMessage) Metadata(ctx context.Context) (Metadata, error) {
 	return Metadata{
 		Type:          TelegramItem,
-		OriginalURL:   tg.FileURL,
+		OriginalURL:   tg.Link,
 		Title:         tg.Audio.Title,
 		Author:        tg.Audio.Performer,
 		Description:   tg.Description,
