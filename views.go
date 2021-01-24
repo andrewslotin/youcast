@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"strings"
 	"text/template"
 	"time"
 
@@ -16,7 +17,15 @@ type Feed struct {
 	Items              []PodcastItem
 }
 
-var indexTemplate = template.Must(template.New("index").Parse(`<!DOCTYPE html>
+var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
+	"stripScheme": func(s string) string {
+		if ind := strings.Index(s, "://"); ind > -1 {
+			return s[ind+3:]
+		}
+
+		return s
+	},
+}).Parse(`<!DOCTYPE html>
 <html>
 
 <head>
@@ -49,7 +58,7 @@ var indexTemplate = template.Must(template.New("index").Parse(`<!DOCTYPE html>
                 class="language-markup">{{ .URL }}/feed</code>.
         </div>
         <div class="row">
-            <a class="waves-effect waves-light red btn" href="podcast://{{ .URL }}/feed"><i
+            <a class="waves-effect waves-light red btn" href="podcast://{{ .URL | stripScheme }}/feed"><i
                     class="material-icons left">rss_feed</i>Subscribe</a>
         </div>
         {{ if .Items }}
