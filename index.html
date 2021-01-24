@@ -8,6 +8,15 @@
         href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
         media="screen,projection" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style type="text/css">
+    #playlist i.material-icons.circle {
+        cursor: pointer;
+    }
+
+    #playlist audio {
+        display: none;
+    }
+    </style>
 </head>
 
 <body>
@@ -31,7 +40,7 @@
                 class="language-markup">{{ .URL }}/feed</code>.
         </div>
         <div class="row">
-            <a class="waves-effect waves-light red btn" href="podcast://{{ .URL }}/feed"><i
+            <a class="waves-effect waves-light red btn" href="podcast://{{ .URL | stripScheme }}/feed"><i
                     class="material-icons left">rss_feed</i>Subscribe</a>
         </div>
         {{ if .Items }}
@@ -70,6 +79,13 @@
     </div>
     <script type="text/javascript"
         src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script type="text/javascript">
+    (function (w) {
+        document.querySelectorAll("#playlist [id^='audio-control-']").forEach(function (el) {
+            console.log(el);
+        });
+    })(window);
+    </script>
 </body>
 
 </html>

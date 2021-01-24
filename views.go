@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -25,6 +27,17 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
 
 		return s
 	},
+	"formatDuration": func(d time.Duration) string {
+		d = d.Round(time.Second)
+
+		var s string
+		if d >= 1*time.Hour {
+			s = strconv.Itoa(int(d/time.Hour)) + ":"
+			d -= (d / time.Hour) * time.Hour
+		}
+
+		return s + fmt.Sprintf("%02d:%02d", int(d/time.Minute), int(d%time.Minute/time.Second))
+	},
 }).Parse(`<!DOCTYPE html>
 <html>
 
@@ -35,6 +48,24 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
         href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
         media="screen,projection" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style type="text/css">
+    #playlist i.material-icons.circle {
+        cursor: pointer;
+    }
+
+    #playlist audio {
+        display: none;
+	}
+	
+	#playlist .collection-item .title {
+		font-weight: bold;
+	}
+
+	#playlist .collection-item .metadata,
+	#playlist .collection-item .description {
+		margin-top: 0.5em;
+	}
+    </style>
 </head>
 
 <body>
@@ -69,22 +100,20 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
             <ul id="playlist" class="collection">
                 {{ range $i, $item := .Items }}
                 <li class="collection-item avatar">
-                    <i id="audio-control-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
+                    <i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
                     <span class="title">{{ $item.Title }}</span>
-                    <p>
-                        <em>added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
+                    <p class="metadata grey-text text-lighten-1">
+                        <em>{{ .Duration | formatDuration }}, added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
                     </p>
                     {{ if $item.MediaURL }}
-                    <p>
-                        <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
-                            <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
+                    <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
+                        <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
                             Sorry, your browser does not support HTML5 audio.
-                        </audio>
-                    </p>
+                    </audio>
                     {{ end }}
                     {{ if $item.Description }}
                     {{ if ne .Title $item.Description }}
-                    <p>
+                    <p class="description">
                         {{ $item.Description }}
                     </p>
                     {{ end }}
@@ -97,6 +126,45 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
     </div>
     <script type="text/javascript"
         src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script type="text/javascript">
+    (function (w) {
+		var activeItem;
+
+		function play(el) {
+			activeItem = el;
+			
+			let audio = document.getElementById(activeItem.dataset["audioId"]);
+
+			activeItem.innerText = "pause_circle_filled";
+			audio.play();
+		}
+
+		function pause() {
+			if (!activeItem) {
+				return;
+			}
+
+			let audio = document.getElementById(activeItem.dataset["audioId"]);
+
+			activeItem.innerText = "play_circle_filled";
+			audio.pause();
+			activeItem = null;
+		}
+
+		function togglePlayButton(event) {
+			let changeTrack = event.target !== activeItem
+			pause();
+
+			if (changeTrack) {
+				play(event.target);
+			}
+		}
+
+        document.querySelectorAll("#playlist [id^='audio-control-']").forEach(function (el) {
+            el.addEventListener("click", togglePlayButton);
+        });
+    })(window);
+    </script>
 </body>
 
 </html>`))
