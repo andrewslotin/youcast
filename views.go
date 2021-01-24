@@ -172,7 +172,7 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
 type HTMLRenderer struct{}
 
 func (HTMLRenderer) ContentType() string {
-	return "text/html"
+	return "text/html; charset=utf-8"
 }
 
 func (HTMLRenderer) Render(w io.Writer, feed Feed) error {
