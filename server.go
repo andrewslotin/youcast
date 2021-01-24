@@ -4,11 +4,9 @@ import (
 	"context"
 	"io"
 	"log"
-	"mime"
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -156,17 +154,7 @@ func (srv *FeedServer) ServeMedia(w http.ResponseWriter, req *http.Request) {
 	}
 	defer fd.Close()
 
-	mimeType := "application/octet-stream"
-	if ind := strings.LastIndexByte(fileName, '.'); ind > -1 {
-		if typ := mime.TypeByExtension(fileName[ind:]); typ != "" {
-			mimeType = mimeTypeToEnclosureType(typ).String()
-		}
-	}
-
-	w.Header().Set("Content-Type", mimeType)
-	w.Header().Set("Content-Size", strconv.FormatInt(fi.Size(), 10))
-
-	io.Copy(w, fd)
+	http.ServeContent(w, req, fileName, fi.ModTime(), fd)
 }
 
 func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
