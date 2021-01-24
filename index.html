@@ -20,7 +20,7 @@
         </div>
         <div class="row">
             <a class="btn"
-                href="javascript:(function(){window.location='{{ .Scheme }}://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen
+                href="javascript:(function(){window.location='{{ .URL }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen
                 later</a>
         </div>
         <div class="row">
@@ -28,29 +28,39 @@
         </div>
         <div class="row">
             And by the way, here is a button to subscribe to it. In case it did not work, use this link: <code
-                class="language-markup">{{ .Scheme }}://{{ .Host }}/feed</code>.
+                class="language-markup">{{ .URL }}/feed</code>.
         </div>
         <div class="row">
-            <a class="waves-effect waves-light red btn" href="podcast://{{ .Host }}/feed"><i
+            <a class="waves-effect waves-light red btn" href="podcast://{{ .URL }}/feed"><i
                     class="material-icons left">rss_feed</i>Subscribe</a>
         </div>
-        {{ if .Feed }}
+        {{ if .Items }}
         <div class="row">
             <h2>Feed</h2>
         </div>
         <div class="row">
-            <ul class="collection">
-                {{ range .Feed }}
+            <ul id="playlist" class="collection">
+                {{ range $i, $item := .Items }}
                 <li class="collection-item avatar">
-                    <i class="material-icons circle red">Play</i>
-                    <span class="title">{{ .Title }}</span>
+                    <i id="audio-control-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
+                    <span class="title">{{ $item.Title }}</span>
                     <p>
-                        <em>added on {{ .AddedAt.Format "2006-01-02" }}</em>
+                        <em>added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
                     </p>
-                    {{ if .Description }}
+                    {{ if $item.MediaURL }}
                     <p>
-                        {{ .Description }}
+                        <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
+                            <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
+                            Sorry, your browser does not support HTML5 audio.
+                        </audio>
                     </p>
+                    {{ end }}
+                    {{ if $item.Description }}
+                    {{ if ne .Title $item.Description }}
+                    <p>
+                        {{ $item.Description }}
+                    </p>
+                    {{ end }}
                     {{ end }}
                 </li>
                 {{ end }}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"html/template"
 	"io"
 	"log"
 	"mime"
@@ -61,11 +60,10 @@ func NewFeedServer(meta PodcastMetadata, svc *FeedService) *FeedServer {
 func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", srv.ServeIndex)
+	mux.HandleFunc("/", srv.ServeFeed)
 	mux.HandleFunc("/add/", srv.HandleAddItem)
 	mux.HandleFunc("/feed", srv.ServeFeed)
 	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
-	//mux.Handle("/downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(srv.svc.storagePath))))
 	mux.HandleFunc("/downloads/", srv.ServeMedia)
 
 	return mux
@@ -74,87 +72,6 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 func (srv *FeedServer) RegisterProvider(subPath string, p audioSourceProvider) {
 	log.Printf("requests sent to /add%s will be handled by %s provider", subPath, p.Name())
 	srv.providers[subPath] = p
-}
-
-var indexTemplate = template.Must(template.New("index").Parse(`<!DOCTYPE html>
-<html>
-
-<head>
-    <title>{{ .Title }} - listen videos later</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link type="text/css" rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
-        media="screen,projection" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-
-<body>
-    <div class="container">
-        <header>
-            <h1>{{ .Title }}</h1>
-        </header>
-        <div class="row">
-            Drag &amp; drop this bookmarklet to your favorites bar.
-        </div>
-        <div class="row">
-            <a class="btn"
-                href="javascript:(function(){window.location='{{ .Scheme }}://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen
-                later</a>
-        </div>
-        <div class="row">
-            Click it while on YouTube video page to add its audio version to your personal podcast.
-        </div>
-        <div class="row">
-            And by the way, here is a button to subscribe to it. In case it did not work, use this link: <code
-                class="language-markup">{{ .Scheme }}://{{ .Host }}/feed</code>.
-        </div>
-        <div class="row">
-            <a class="waves-effect waves-light red btn" href="podcast://{{ .Host }}/feed"><i
-                    class="material-icons left">rss_feed</i>Subscribe</a>
-        </div>
-        {{ if .Feed }}
-        <div class="row">
-            <h2>Feed</h2>
-        </div>
-        <div class="row">
-            <ul class="collection">
-                {{ range .Feed }}
-                <li class="collection-item avatar">
-                    <i class="material-icons circle red">Play</i>
-                    <span class="title">{{ .Title }}</span>
-                    <p>
-                        <em>added on {{ .AddedAt.Format "2006-01-02" }}</em>
-                    </p>
-                    {{ if .Description }}
-                    <p>
-                        {{ .Description }}
-                    </p>
-                    {{ end }}
-                </li>
-                {{ end }}
-            </ul>
-        </div>
-        {{ end }}
-    </div>
-    <script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-</body>
-
-</html>`))
-
-type indexTemplateArgs struct {
-	Scheme, Host, Title string
-	Feed                []PodcastItem
-}
-
-func (srv *FeedServer) ServeIndex(w http.ResponseWriter, req *http.Request) {
-	if err := indexTemplate.Execute(w, indexTemplateArgs{
-		Scheme: reqScheme(req),
-		Host:   req.Host,
-		Title:  srv.meta.Title,
-	}); err != nil {
-		log.Printf("failed to render index template: %s", err)
-	}
 }
 
 func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
@@ -195,7 +112,12 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 		Render(io.Writer, Feed) error
 	}
 
-	view = AtomRenderer{}
+	switch req.URL.Path {
+	case "/feed":
+		view = AtomRenderer{}
+	default:
+		view = HTMLRenderer{}
+	}
 
 	w.Header().Set("Content-Type", view.ContentType())
 	if err := view.Render(w, feed); err != nil {
