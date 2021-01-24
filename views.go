@@ -101,7 +101,14 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
                 {{ range $i, $item := .Items }}
                 <li class="collection-item avatar">
                     <i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
-                    <span class="title">{{ $item.Title }}</span>
+					<span class="title">{{ $item.Title }}</span>
+					<p>
+						{{ if .OriginalURL }}
+						<a href="{{ .OriginalURL }}">{{ .Author }}</a>
+						{{ else }}
+						{{ .Author }}
+						{{ end }}
+					</p>
                     <p class="metadata grey-text text-lighten-1">
                         <em>{{ .Duration | formatDuration }}, added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
                     </p>
@@ -192,7 +199,7 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 	}
 
 	p := podcast.New(feed.Title, feed.URL, feed.Description, pubDate, nil)
-	p.AddImage(feed.IconURL) // (scheme + "://" + req.Host + "/favicon.ico")
+	p.AddImage(feed.IconURL)
 
 	for _, it := range feed.Items {
 		item := podcast.Item{
