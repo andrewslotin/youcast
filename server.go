@@ -76,50 +76,101 @@ func (srv *FeedServer) RegisterProvider(subPath string, p audioSourceProvider) {
 	srv.providers[subPath] = p
 }
 
-var indexTemplate = template.Must(template.New("index").Parse(`
-<!DOCTYPE html>
+var indexTemplate = template.Must(template.New("index").Parse(`<!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <title>{{ .Title }} - listen videos later</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  </head>
-  <body>
+    <link type="text/css" rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+        media="screen,projection" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
     <div class="container">
-      <header>
-        <h1>{{ .Title }}</h1>
-      </header>
-      <div class="row">
-        Drag &amp; drop this bookmarklet to your favorites bar.
-      </div>
-      <div class="row">
-        <a class="btn" href="javascript:(function(){window.location='{{ .Scheme }}://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen later</a>
-      </div>
-      <div class="row">
-        Click it while on YouTube video page to add its audio version to your personal podcast.
-      </div>
-      <div class="row">
-        And by the way, here is a button to subscribe to it. In case it did not work, use this link: <code class="language-markup">{{ .Scheme }}://{{ .Host }}/feed</code>.
-      </div>
-      <div class="row">
-        <a class="waves-effect waves-light red btn" href="podcast://{{ .Host }}/feed"><i class="material-icons left">rss_feed</i>Subscribe</a>
-      </div>
+        <header>
+            <h1>{{ .Title }}</h1>
+        </header>
+        <div class="row">
+            Drag &amp; drop this bookmarklet to your favorites bar.
+        </div>
+        <div class="row">
+            <a class="btn"
+                href="javascript:(function(){window.location='{{ .Scheme }}://{{ .Host }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen
+                later</a>
+        </div>
+        <div class="row">
+            Click it while on YouTube video page to add its audio version to your personal podcast.
+        </div>
+        <div class="row">
+            And by the way, here is a button to subscribe to it. In case it did not work, use this link: <code
+                class="language-markup">{{ .Scheme }}://{{ .Host }}/feed</code>.
+        </div>
+        <div class="row">
+            <a class="waves-effect waves-light red btn" href="podcast://{{ .Host }}/feed"><i
+                    class="material-icons left">rss_feed</i>Subscribe</a>
+        </div>
+        {{ if .Feed }}
+        <div class="row">
+            <h2>Feed</h2>
+        </div>
+        <div class="row">
+            <ul class="collection">
+                {{ range .Feed }}
+                <li class="collection-item avatar">
+                    <i class="material-icons circle red">Play</i>
+                    <span class="title">{{ .Title }}</span>
+                    <p>
+                        <em>added on {{ .AddedAt.Format "2006-01-02" }}</em>
+                    </p>
+                    {{ if .Description }}
+                    <p>
+                        {{ .Description }}
+                    </p>
+                    {{ end }}
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+        {{ end }}
     </div>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  </body>
-</html>
-`))
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</body>
+
+</html>`))
+
+type indexTemplateArgs struct {
+	Scheme, Host, Title string
+	Feed                []PodcastItem
+}
 
 func (srv *FeedServer) ServeIndex(w http.ResponseWriter, req *http.Request) {
-	if err := indexTemplate.Execute(w, struct {
-		Scheme, Host, Title string
-	}{reqScheme(req), req.Host, srv.meta.Title}); err != nil {
+	if err := indexTemplate.Execute(w, indexTemplateArgs{
+		Scheme: reqScheme(req),
+		Host:   req.Host,
+		Title:  srv.meta.Title,
+	}); err != nil {
 		log.Printf("failed to render index template: %s", err)
 	}
 }
 
 func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
+	scheme := reqScheme(req)
+
+	feed := Feed{
+		URL:         srv.meta.Link,
+		IconURL:     scheme + "://" + req.Host + "/favicon.ico",
+		Title:       srv.meta.Title,
+		Description: srv.meta.Description,
+	}
+
+	if feed.URL == "" {
+		feed.URL = scheme + "://" + req.Host
+	}
+
 	items, err := srv.svc.Items()
 	if err != nil {
 		log.Println("failed to fetch podcast items: ", err)
@@ -127,47 +178,29 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var pubDate *time.Time
+	for _, item := range items {
+		if !strings.HasPrefix(item.MediaURL, "http://") && !strings.HasPrefix(item.MediaURL, "https://") {
+			item.MediaURL = scheme + "://" + req.Host + item.MediaURL
+		}
+
+		feed.Items = append(feed.Items, item)
+	}
+
 	if len(items) > 0 {
-		pubDate = &items[len(items)-1].AddedAt
+		feed.PubDate = items[len(items)-1].AddedAt
 	}
 
-	scheme := reqScheme(req)
-
-	feedLink := srv.meta.Link
-	if feedLink == "" {
-		feedLink = scheme + "://" + req.Host
+	var view interface {
+		ContentType() string
+		Render(io.Writer, Feed) error
 	}
 
-	p := podcast.New(srv.meta.Title, feedLink, srv.meta.Description, pubDate, nil)
-	p.AddImage(scheme + "://" + req.Host + "/favicon.ico")
+	view = AtomRenderer{}
 
-	for _, it := range items {
-		item := podcast.Item{
-			Title: it.Title,
-			Author: &podcast.Author{
-				Name:  it.Author,
-				Email: "user@example.com",
-			},
-			Description: it.Description,
-			Link:        it.OriginalURL,
-			PubDate:     &it.AddedAt,
-		}
-
-		u := it.MediaURL
-		if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
-			u = scheme + "://" + req.Host + it.MediaURL
-		}
-
-		item.AddEnclosure(u, mimeTypeToEnclosureType(it.MIMEType), int64(it.ContentLength))
-
-		if _, err := p.AddItem(item); err != nil {
-			log.Printf("failed to add %s: %s", it.OriginalURL, err)
-		}
+	w.Header().Set("Content-Type", view.ContentType())
+	if err := view.Render(w, feed); err != nil {
+		log.Println("failed to render feed to", view.ContentType(), ":", err)
 	}
-
-	w.Header().Set("Content-Type", "application/xml")
-	p.Encode(w)
 }
 
 func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
