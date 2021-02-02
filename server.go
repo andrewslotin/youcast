@@ -58,7 +58,7 @@ func NewFeedServer(meta PodcastMetadata, svc *FeedService) *FeedServer {
 func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", srv.ServeFeed)
+	mux.HandleFunc("/", CORSMiddleware(srv.ServeFeed))
 	mux.HandleFunc("/add/", srv.HandleAddItem)
 	mux.HandleFunc("/feed", srv.ServeFeed)
 	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
