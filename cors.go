@@ -4,8 +4,8 @@ import (
 	"net/http"
 )
 
-func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
+func CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
@@ -15,6 +15,6 @@ func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		next(w, req)
-	}
+		next.ServeHTTP(w, req)
+	})
 }
