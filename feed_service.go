@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 type Storage interface {
 	Add(PodcastItem) error
+	Remove(string) (PodcastItem, error)
 	Items() ([]PodcastItem, error)
 }
 
@@ -48,6 +50,22 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 
 	if err := s.st.Add(item); err != nil {
 		return fmt.Errorf("failed to add item to the feed: %w", err)
+	}
+
+	return nil
+}
+
+func (s *FeedService) RemoveItem(itemID string) error {
+	log.Printf("removing %s", itemID)
+
+	item, err := s.st.Remove(itemID)
+	if err != nil {
+		return err
+	}
+
+	filePath := path.Join(s.storagePath, strings.TrimPrefix(item.MediaURL, "/downloads/"))
+	if err := os.Remove(filePath); err != nil {
+		return fmt.Errorf("failed to delete %s: %w", filePath, err)
 	}
 
 	return nil
