@@ -61,6 +61,7 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux.HandleFunc("/", srv.ServeFeed)
 	mux.HandleFunc("/add/", srv.HandleAddItem)
 	mux.HandleFunc("/feed", srv.ServeFeed)
+	mux.HandleFunc("/feed/", srv.HandleItem)
 	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
 	mux.HandleFunc("/downloads/", srv.ServeMedia)
 
@@ -190,6 +191,24 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}()
+}
+
+func (srv *FeedServer) HandleItem(w http.ResponseWriter, req *http.Request) {
+	switch {
+	case req.Method == http.MethodDelete:
+		fallthrough
+	case req.Method == http.MethodPost && strings.ToLower(req.FormValue("action")) == "delete":
+		srv.HandleRemoveItem(w, req)
+	}
+}
+
+func (srv *FeedServer) HandleRemoveItem(w http.ResponseWriter, req *http.Request) {
+	itemID := req.URL.Path[strings.LastIndexByte(req.URL.Path, '/')+1:]
+	if err := srv.svc.RemoveItem(itemID); err != nil {
+		log.Println("failed to remove podcast item", itemID, ":", err)
+	}
+
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 }
 
 func reqScheme(req *http.Request) string {

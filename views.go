@@ -56,6 +56,10 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
     #playlist audio {
         display: none;
 	}
+
+	#playlist .collection-item {
+		padding-right: 42px;
+	}
 	
 	#playlist .collection-item .title {
 		font-weight: bold;
@@ -99,8 +103,12 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{
         <div class="row">
             <ul id="playlist" class="collection">
                 {{ range $i, $item := .Items }}
-                <li class="collection-item avatar">
-                    <i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
+				<li class="collection-item avatar">
+					<form id="delete-item-{{ $i }}" action="/feed/{{ .ID }}" method="POST">
+						<input type="hidden" name="action" value="delete"/>
+						<a href="javascript:document.querySelector('form#delete-item-{{ $i }}').submit()" class="secondary-content"><i class="material-icons tiny grey-text text-lighten-2">delete_forever</i></a>
+					</form>
+					<i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
 					<span class="title">{{ $item.Title }}</span>
 					<p>
 						{{ if .OriginalURL }}
