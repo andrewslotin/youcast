@@ -2,12 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
 )
+
+var ErrItemNotFound = errors.New("no such item")
 
 type PodcastItemType uint8
 
@@ -43,6 +46,10 @@ func NewPodcastItem(meta Metadata, addedAt time.Time) PodcastItem {
 	}
 }
 
+func (item PodcastItem) ID() string {
+	return item.AddedAt.UTC().Format(time.RFC3339Nano)
+}
+
 type memoryStorage struct {
 	mu    sync.RWMutex
 	items []PodcastItem
@@ -55,6 +62,22 @@ func (s *memoryStorage) Add(item PodcastItem) error {
 	s.items = append(s.items, item)
 
 	return nil
+}
+
+func (s *memoryStorage) Remove(itemID string) (PodcastItem, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, item := range s.items {
+		if item.ID() == itemID {
+			copy(s.items[i:], s.items[i+1:])
+			s.items = s.items[:len(s.items)-1]
+
+			return item, nil
+		}
+	}
+
+	return PodcastItem{}, ErrItemNotFound
 }
 
 func (s *memoryStorage) Items() ([]PodcastItem, error) {
@@ -103,7 +126,7 @@ func newBoltStorage(bucket string, db *bolt.DB) *boltStorage {
 }
 
 func (s *boltStorage) Add(item PodcastItem) error {
-	key := []byte(item.AddedAt.UTC().Format(time.RFC3339Nano))
+	key := []byte(item.ID())
 	data, err := json.Marshal(newBoltPodcastItem(item))
 	if err != nil {
 		return fmt.Errorf("failed to marshal podcast item: %w", err)
@@ -117,6 +140,33 @@ func (s *boltStorage) Add(item PodcastItem) error {
 
 		if err := b.Put(key, data); err != nil {
 			return fmt.Errorf("failed to store podcast item into %q: %w", s.Bucket, err)
+		}
+
+		return nil
+	})
+}
+
+func (s *boltStorage) Remove(itemID string) (PodcastItem, error) {
+	var item PodcastItem
+
+	return item, s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(s.Bucket)
+		if b == nil {
+			return ErrItemNotFound
+		}
+
+		k := []byte(itemID)
+		v := b.Get(k)
+		if v == nil {
+			return ErrItemNotFound
+		}
+
+		if err := b.Delete(k); err != nil {
+			return fmt.Errorf("failed to remove podcast item: %w", err)
+		}
+
+		if err := json.Unmarshal(v, &item); err != nil {
+			return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
 		}
 
 		return nil
