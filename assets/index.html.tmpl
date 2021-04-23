@@ -15,7 +15,20 @@
 
     #playlist audio {
         display: none;
-    }
+	}
+
+	#playlist .collection-item {
+		padding-right: 42px;
+	}
+	
+	#playlist .collection-item .title {
+		font-weight: bold;
+	}
+
+	#playlist .collection-item .metadata,
+	#playlist .collection-item .description {
+		margin-top: 0.5em;
+	}
     </style>
 </head>
 
@@ -50,23 +63,32 @@
         <div class="row">
             <ul id="playlist" class="collection">
                 {{ range $i, $item := .Items }}
-                <li class="collection-item avatar">
-                    <i id="audio-control-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
-                    <span class="title">{{ $item.Title }}</span>
-                    <p>
-                        <em>added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
+				<li class="collection-item avatar">
+					<form id="delete-item-{{ $i }}" action="/feed/{{ .ID }}" method="POST">
+						<input type="hidden" name="action" value="delete"/>
+						<a href="javascript:document.querySelector('form#delete-item-{{ $i }}').submit()" class="secondary-content"><i class="material-icons tiny grey-text text-lighten-2">delete_forever</i></a>
+					</form>
+					<i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
+					<span class="title">{{ $item.Title }}</span>
+					<p>
+						{{ if .OriginalURL }}
+						<a href="{{ .OriginalURL }}">{{ .Author }}</a>
+						{{ else }}
+						{{ .Author }}
+						{{ end }}
+					</p>
+                    <p class="metadata grey-text text-lighten-1">
+                        <em>{{ .Duration | formatDuration }}, added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
                     </p>
                     {{ if $item.MediaURL }}
-                    <p>
-                        <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
-                            <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
+                    <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
+                        <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
                             Sorry, your browser does not support HTML5 audio.
-                        </audio>
-                    </p>
+                    </audio>
                     {{ end }}
                     {{ if $item.Description }}
                     {{ if ne .Title $item.Description }}
-                    <p>
+                    <p class="description">
                         {{ $item.Description }}
                     </p>
                     {{ end }}
@@ -81,8 +103,40 @@
         src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script type="text/javascript">
     (function (w) {
+		var activeItem;
+
+		function play(el) {
+			activeItem = el;
+			
+			let audio = document.getElementById(activeItem.dataset["audioId"]);
+
+			activeItem.innerText = "pause_circle_filled";
+			audio.play();
+		}
+
+		function pause() {
+			if (!activeItem) {
+				return;
+			}
+
+			let audio = document.getElementById(activeItem.dataset["audioId"]);
+
+			activeItem.innerText = "play_circle_filled";
+			audio.pause();
+			activeItem = null;
+		}
+
+		function togglePlayButton(event) {
+			let changeTrack = event.target !== activeItem
+			pause();
+
+			if (changeTrack) {
+				play(event.target);
+			}
+		}
+
         document.querySelectorAll("#playlist [id^='audio-control-']").forEach(function (el) {
-            console.log(el);
+            el.addEventListener("click", togglePlayButton);
         });
     })(window);
     </script>

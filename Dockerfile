@@ -1,4 +1,4 @@
-FROM golang:latest AS builder
+FROM golang:1.16 AS builder
 
 ARG APP_USER=appuser
 ARG APP_UID

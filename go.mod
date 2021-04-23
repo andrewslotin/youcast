@@ -1,8 +1,8 @@
 module github.com/andrewslotin/youcast
 
-// +heroku goVersion go1.15
+// +heroku goVersion go1.16
 
-go 1.15
+go 1.16
 
 require (
 	github.com/boltdb/bolt v1.3.1
