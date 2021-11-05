@@ -73,7 +73,7 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 				Name:  it.Author,
 				Email: "user@example.com",
 			},
-			Description: it.Description,
+			Description: it.Body,
 			Link:        it.OriginalURL,
 			PubDate:     &it.AddedAt,
 		}

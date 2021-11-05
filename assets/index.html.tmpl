@@ -86,10 +86,10 @@
                             Sorry, your browser does not support HTML5 audio.
                     </audio>
                     {{ end }}
-                    {{ if $item.Description }}
-                    {{ if ne .Title $item.Description }}
+                    {{ if $item.Description.Body }}
+                    {{ if ne .Title $item.Description.Body }}
                     <p class="description">
-                        {{ $item.Description }}
+                        {{ $item.Description.Body }}
                     </p>
                     {{ end }}
                     {{ end }}
