@@ -16,6 +16,7 @@ import (
 type Storage interface {
 	Add(PodcastItem) error
 	Remove(string) (PodcastItem, error)
+	UpdateDescription(string, Description) (PodcastItem, error)
 	Items() ([]PodcastItem, error)
 }
 
