@@ -199,6 +199,10 @@ func (srv *FeedServer) HandleItem(w http.ResponseWriter, req *http.Request) {
 		fallthrough
 	case req.Method == http.MethodPost && strings.ToLower(req.FormValue("action")) == "delete":
 		srv.HandleRemoveItem(w, req)
+	case req.Method == http.MethodPatch:
+		fallthrough
+	case req.Method == http.MethodPost && strings.ToLower(req.FormValue("action")) == "patch":
+		srv.HandleUpdateItem(w, req)
 	}
 }
 
@@ -209,6 +213,26 @@ func (srv *FeedServer) HandleRemoveItem(w http.ResponseWriter, req *http.Request
 	}
 
 	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+}
+
+func (srv *FeedServer) HandleUpdateItem(w http.ResponseWriter, req *http.Request) {
+	itemID := req.URL.Path[strings.LastIndexByte(req.URL.Path, '/')+1:]
+
+	desc := Description{
+		Title: strings.TrimSpace(req.FormValue("title")),
+		Body:  strings.TrimSpace(req.FormValue("description")),
+	}
+
+	if desc.Title == "" {
+		http.Error(w, "Missing title", http.StatusBadRequest)
+		return
+	}
+
+	if err := srv.svc.UpdateItem(itemID, desc); err != nil {
+		log.Println("failed to update podcast item", itemID, ":", err)
+	}
+
+	http.Redirect(w, req, "/feed/", http.StatusSeeOther)
 }
 
 func reqScheme(req *http.Request) string {
