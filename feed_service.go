@@ -56,6 +56,17 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	return nil
 }
 
+func (s *FeedService) UpdateItem(itemID string, desc Description) error {
+	log.Printf("updating %s", itemID)
+
+	_, err := s.st.UpdateDescription(itemID, desc)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *FeedService) RemoveItem(itemID string) error {
 	log.Printf("removing %s", itemID)
 
