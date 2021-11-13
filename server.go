@@ -238,7 +238,7 @@ func (srv *FeedServer) HandleUpdateItem(w http.ResponseWriter, req *http.Request
 		log.Println("failed to update podcast item", itemID, ":", err)
 	}
 
-	http.Redirect(w, req, "/feed/", http.StatusSeeOther)
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 }
 
 func reqScheme(req *http.Request) string {
