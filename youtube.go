@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"net/url"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/kkdai/youtube/v2"
@@ -81,12 +79,6 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 
 	y.log.Printf("got the best audio stream %s @ %d bps", bestAudio.MimeType, bestAudio.Bitrate)
 
-	cl, err := strconv.ParseInt(bestAudio.ContentLength, 10, 64)
-	if err != nil {
-		log.Printf("failed to parse content length, will estimate: %s", err)
-		cl = int64(math.Ceil(float64(bestAudio.Bitrate) * video.Duration.Seconds()))
-	}
-
 	mimeType := bestAudio.MimeType
 	if ind := strings.IndexByte(mimeType, ';'); ind >= 0 {
 		mimeType = mimeType[:ind]
@@ -100,7 +92,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 		Description:   video.Title,
 		Duration:      video.Duration,
 		MIMEType:      mimeType,
-		ContentLength: cl,
+		ContentLength: bestAudio.ContentLength,
 	}, nil
 }
 
