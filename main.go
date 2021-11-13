@@ -58,6 +58,7 @@ func main() {
 	}, svc)
 
 	srv.RegisterProvider("/yt", &YouTubeProvider{})
+	srv.RegisterProvider("/my", NewUploadedMediaProvider())
 
 	if token, ok := os.LookupEnv("TELEGRAM_API_TOKEN"); ok {
 		p, err := NewTelegramProvider(token, os.Getenv("TELEGRAM_API_ENDPOINT"), os.Getenv("TELEGRAM_FILE_SERVER"))
