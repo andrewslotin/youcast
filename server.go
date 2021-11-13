@@ -115,7 +115,13 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	case "/feed":
 		view = AtomRenderer{}
 	default:
-		view = HTMLRenderer{}
+		tmpl := Templates
+		if args.DevMode {
+			tmpl = ParseTemplates(os.DirFS("./assets"))
+		}
+		view = HTMLRenderer{
+			Template: tmpl.Lookup("index.html.tmpl"),
+		}
 	}
 
 	w.Header().Set("Content-Type", view.ContentType())

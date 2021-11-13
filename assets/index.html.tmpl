@@ -20,7 +20,7 @@
 	#playlist .collection-item {
 		padding-right: 42px;
 	}
-	
+
 	#playlist .collection-item .title {
 		font-weight: bold;
 	}
@@ -107,7 +107,7 @@
 
 		function play(el) {
 			activeItem = el;
-			
+
 			let audio = document.getElementById(activeItem.dataset["audioId"]);
 
 			activeItem.innerText = "pause_circle_filled";
