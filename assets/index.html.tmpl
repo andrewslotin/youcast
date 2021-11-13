@@ -15,20 +15,24 @@
 
     #playlist audio {
         display: none;
-	}
+    }
 
-	#playlist .collection-item {
-		padding-right: 42px;
-	}
-	
-	#playlist .collection-item .title {
-		font-weight: bold;
-	}
+    #playlist .collection-item {
+        padding-right: 42px;
+    }
 
-	#playlist .collection-item .metadata,
-	#playlist .collection-item .description {
-		margin-top: 0.5em;
-	}
+    #playlist .collection-item .title {
+        font-weight: bold;
+    }
+
+    #playlist .collection-item .metadata,
+    #playlist .collection-item .description {
+        margin-top: 0.5em;
+    }
+
+    .hidden {
+        display: none;
+    }
     </style>
 </head>
 
@@ -53,8 +57,9 @@
                 class="language-markup">{{ .URL }}/feed</code>.
         </div>
         <div class="row">
-            <a class="waves-effect waves-light red btn" href="podcast://{{ .URL | stripScheme }}/feed"><i
-                    class="material-icons left">rss_feed</i>Subscribe</a>
+          <a class="waves-effect waves-light red btn" href="podcast://{{ .URL | stripScheme }}/feed">
+            <i class="material-icons left">rss_feed</i>Subscribe
+          </a>
         </div>
         {{ if .Items }}
         <div class="row">
@@ -63,77 +68,129 @@
         <div class="row">
             <ul id="playlist" class="collection">
                 {{ range $i, $item := .Items }}
-				<li class="collection-item avatar">
-					<form id="delete-item-{{ $i }}" action="/feed/{{ .ID }}" method="POST">
-						<input type="hidden" name="action" value="delete"/>
-						<a href="javascript:document.querySelector('form#delete-item-{{ $i }}').submit()" class="secondary-content"><i class="material-icons tiny grey-text text-lighten-2">delete_forever</i></a>
-					</form>
-					<i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
-					<span class="title">{{ $item.Title }}</span>
-					<p>
-						{{ if .OriginalURL }}
-						<a href="{{ .OriginalURL }}">{{ .Author }}</a>
-						{{ else }}
-						{{ .Author }}
-						{{ end }}
-					</p>
-                    <p class="metadata grey-text text-lighten-1">
+                  <li class="collection-item avatar">
+                    <form id="delete-item-{{ $i }}" action="/feed/{{ .ID }}" method="POST">
+                      <input type="hidden" name="action" value="delete"/>
+                      <a href="javascript:document.querySelector('form#delete-item-{{ $i }}').submit()" class="secondary-content"><i class="material-icons tiny grey-text text-lighten-2">delete_forever</i></a>
+                    </form>
+                    <i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
+                    <form id="update-item-{{ $i }}" action="/feed/{{ .ID }}" method="POST">
+                      <input type="hidden" name="action" value="patch"/>
+                      <span class="title editable">{{ $item.Title }}</span>
+                      <div class="input-field hidden">
+                        <input placeholder="Title" type="text" name="title" id="title-{{ .ID }}" class="validate" required value="{{ $item.Title }}"/>
+                        <label for="title-{{ .ID }}">Title</label>
+                      </div>
+                      <p>
+                        {{ if .OriginalURL }}
+                          <a href="{{ .OriginalURL }}">{{ .Author }}</a>
+                        {{ else }}
+                          {{ .Author }}
+                        {{ end }}
+                      </p>
+                      <p class="metadata grey-text text-lighten-1">
                         <em>{{ .Duration | formatDuration }}, added on {{ $item.AddedAt.Format "2006-01-02" }}</em>
-                    </p>
-                    {{ if $item.MediaURL }}
-                    <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
-                        <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
-                            Sorry, your browser does not support HTML5 audio.
-                    </audio>
-                    {{ end }}
-                    {{ if $item.Description }}
-                    {{ if ne .Title $item.Description }}
-                    <p class="description">
-                        {{ $item.Description }}
-                    </p>
-                    {{ end }}
-                    {{ end }}
+                      </p>
+                      {{ if $item.MediaURL }}
+                        <audio id="audio-{{ $i }}" preload="none" controls="" type="{{ $item.MIMEType }}">
+                          <source type="{{ $item.MIMEType }}" src="{{ $item.MediaURL }}">
+                              Sorry, your browser does not support HTML5 audio.
+                        </audio>
+                      {{ end }}
+                      {{ if $item.Description.Body }}
+                        {{ if ne .Title $item.Description.Body }}
+                          <p class="description editable">{{ $item.Description.Body }}</p>
+                        {{ end }}
+                      {{ end }}
+                      <div class="input-field hidden">
+                        <textarea placeholder="Title" type="text" id="description-{{ .ID }}" name="description" class="materialize-textarea">
+                          {{- $item.Description.Body -}}
+                        </textarea>
+                        <label for="description-{{ .ID }}">Description</label>
+                      </div>
+                      <div id="toggle-update-item-{{ $i }}">
+                        <em><a href="javascript:void(0)">edit</a></em>
+                      </div>
+                      <div class="input-field hidden">
+                        <button class="btn-small waves-effect waves-light" type="submit">
+                          Save
+                          <i class="material-icons right">send</i>
+                        </button>
+                        <button class="btn-small waves-effect waves-light grey lighten-5 black-text" type="reset">
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
                 </li>
                 {{ end }}
             </ul>
         </div>
         {{ end }}
     </div>
-    <script type="text/javascript"
-        src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script type="text/javascript">
-    (function (w) {
-		var activeItem;
+        (function (w) {
+        var activeItem;
 
-		function play(el) {
-			activeItem = el;
-			
-			let audio = document.getElementById(activeItem.dataset["audioId"]);
+        function play(el) {
+          activeItem = el;
 
-			activeItem.innerText = "pause_circle_filled";
-			audio.play();
-		}
+          let audio = document.getElementById(activeItem.dataset["audioId"]);
 
-		function pause() {
-			if (!activeItem) {
-				return;
-			}
+          activeItem.innerText = "pause_circle_filled";
+          audio.play();
+        }
 
-			let audio = document.getElementById(activeItem.dataset["audioId"]);
+        function pause() {
+          if (!activeItem) {
+            return;
+          }
 
-			activeItem.innerText = "play_circle_filled";
-			audio.pause();
-			activeItem = null;
-		}
+          let audio = document.getElementById(activeItem.dataset["audioId"]);
 
-		function togglePlayButton(event) {
-			let changeTrack = event.target !== activeItem
-			pause();
+          activeItem.innerText = "play_circle_filled";
+          audio.pause();
+          activeItem = null;
+        }
 
-			if (changeTrack) {
-				play(event.target);
-			}
-		}
+        function togglePlayButton(event) {
+          let changeTrack = event.target !== activeItem
+          pause();
+
+          if (changeTrack) {
+            play(event.target);
+          }
+        }
+
+        function toggleEditMode(event) {
+            let el = event.target,
+                item = el.closest(".collection-item");
+
+            let editMode = item.querySelector("[id^='toggle-update-item-']").classList.toggle("hidden");
+
+            item.querySelectorAll(".input-field").forEach(function (el) {
+                if (editMode) {
+                    el.classList.remove("hidden");
+                } else {
+                    el.classList.add("hidden");
+                }
+            });
+
+            item.querySelectorAll(".editable").forEach(function (el) {
+                if (editMode) {
+                    el.classList.add("hidden");
+                } else {
+                    el.classList.remove("hidden");
+                }
+            });
+        }
+
+        document.querySelectorAll("#playlist [id^='toggle-update-item-'] a").forEach(function (el) {
+            el.addEventListener("click", toggleEditMode);
+        });
+        document.querySelectorAll("#playlist button[type=reset]").forEach(function (el) {
+            el.addEventListener("click", toggleEditMode);
+        });
 
         document.querySelectorAll("#playlist [id^='audio-control-']").forEach(function (el) {
             el.addEventListener("click", togglePlayButton);

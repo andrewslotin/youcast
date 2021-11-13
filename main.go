@@ -19,12 +19,14 @@ var args struct {
 	ListenAddr  string
 	DBPath      string
 	StoragePath string
+	DevMode     bool
 }
 
 func main() {
 	flag.StringVar(&args.ListenAddr, "l", os.Getenv("LISTEN_ADDR"), "Listen address")
 	flag.StringVar(&args.DBPath, "db", os.Getenv("DB_PATH"), "Path to the database")
 	flag.StringVar(&args.StoragePath, "storage-dir", os.Getenv("STORAGE_PATH"), "Path to the directory where to store downloaded files")
+	flag.BoolVar(&args.DevMode, "dev", false, "Development mode (read assets from ./assets on each request)")
 	flag.Parse()
 
 	if p, ok := os.LookupEnv("PORT"); ok {

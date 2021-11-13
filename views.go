@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"strconv"
 	"strings"
@@ -20,35 +21,43 @@ type Feed struct {
 	Items              []PodcastItem
 }
 
-var Templates = template.Must(template.New("").Funcs(template.FuncMap{
-	"stripScheme": func(s string) string {
-		if ind := strings.Index(s, "://"); ind > -1 {
-			return s[ind+3:]
-		}
+var Templates = ParseTemplates(assets.Templates)
 
-		return s
-	},
-	"formatDuration": func(d time.Duration) string {
-		d = d.Round(time.Second)
+func ParseTemplates(fs fs.FS) *template.Template {
+	return template.Must(template.New("").
+		Funcs(template.FuncMap{
+			"stripScheme": func(s string) string {
+				if ind := strings.Index(s, "://"); ind > -1 {
+					return s[ind+3:]
+				}
 
-		var s string
-		if d >= 1*time.Hour {
-			s = strconv.Itoa(int(d/time.Hour)) + ":"
-			d -= (d / time.Hour) * time.Hour
-		}
+				return s
+			},
+			"formatDuration": func(d time.Duration) string {
+				d = d.Round(time.Second)
 
-		return s + fmt.Sprintf("%02d:%02d", int(d/time.Minute), int(d%time.Minute/time.Second))
-	},
-}).ParseFS(assets.Templates, "*.html.tmpl"))
+				var s string
+				if d >= 1*time.Hour {
+					s = strconv.Itoa(int(d/time.Hour)) + ":"
+					d -= (d / time.Hour) * time.Hour
+				}
 
-type HTMLRenderer struct{}
+				return s + fmt.Sprintf("%02d:%02d", int(d/time.Minute), int(d%time.Minute/time.Second))
+			},
+		}).
+		ParseFS(fs, "*.html.tmpl"))
+}
+
+type HTMLRenderer struct {
+	Template *template.Template
+}
 
 func (HTMLRenderer) ContentType() string {
 	return "text/html; charset=utf-8"
 }
 
-func (HTMLRenderer) Render(w io.Writer, feed Feed) error {
-	return Templates.ExecuteTemplate(w, "index.html.tmpl", feed)
+func (r HTMLRenderer) Render(w io.Writer, feed Feed) error {
+	return r.Template.Execute(w, feed)
 }
 
 type AtomRenderer struct{}
@@ -73,7 +82,7 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 				Name:  it.Author,
 				Email: "user@example.com",
 			},
-			Description: it.Description,
+			Description: it.Body,
 			Link:        it.OriginalURL,
 			PubDate:     &it.AddedAt,
 		}

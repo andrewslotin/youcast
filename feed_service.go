@@ -16,6 +16,7 @@ import (
 type Storage interface {
 	Add(PodcastItem) error
 	Remove(string) (PodcastItem, error)
+	UpdateDescription(string, Description) (PodcastItem, error)
 	Items() ([]PodcastItem, error)
 }
 
@@ -50,6 +51,17 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 
 	if err := s.st.Add(item); err != nil {
 		return fmt.Errorf("failed to add item to the feed: %w", err)
+	}
+
+	return nil
+}
+
+func (s *FeedService) UpdateItem(itemID string, desc Description) error {
+	log.Printf("updating %s", itemID)
+
+	_, err := s.st.UpdateDescription(itemID, desc)
+	if err != nil {
+		return err
 	}
 
 	return nil

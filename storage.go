@@ -19,10 +19,14 @@ const (
 	TelegramItem
 )
 
+type Description struct {
+	Title string
+	Body  string
+}
+
 type PodcastItem struct {
+	Description
 	Type          PodcastItemType
-	Title         string
-	Description   string
 	Author        string
 	OriginalURL   string
 	MediaURL      string
@@ -34,10 +38,12 @@ type PodcastItem struct {
 
 func NewPodcastItem(meta Metadata, addedAt time.Time) PodcastItem {
 	return PodcastItem{
+		Description: Description{
+			Title: meta.Title,
+			Body:  meta.Description,
+		},
 		Type:          meta.Type,
-		Title:         meta.Title,
 		Author:        meta.Author,
-		Description:   meta.Description,
 		OriginalURL:   meta.OriginalURL,
 		Duration:      meta.Duration,
 		MIMEType:      meta.MIMEType,
@@ -80,6 +86,21 @@ func (s *memoryStorage) Remove(itemID string) (PodcastItem, error) {
 	return PodcastItem{}, ErrItemNotFound
 }
 
+func (s *memoryStorage) UpdateDescription(itemID string, desc Description) (PodcastItem, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i := range s.items {
+		if s.items[i].ID() == itemID {
+			s.items[i].Description = desc
+
+			return s.items[i], nil
+		}
+	}
+
+	return PodcastItem{}, ErrItemNotFound
+}
+
 func (s *memoryStorage) Items() ([]PodcastItem, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -107,7 +128,7 @@ func newBoltPodcastItem(item PodcastItem) boltPodcastItem {
 		item.Type,
 		item.Title,
 		item.Author,
-		item.Description,
+		item.Body,
 		item.OriginalURL,
 		item.MediaURL,
 		item.Duration,
@@ -161,12 +182,82 @@ func (s *boltStorage) Remove(itemID string) (PodcastItem, error) {
 			return ErrItemNotFound
 		}
 
+		addedAt, err := time.Parse(time.RFC3339Nano, string(k))
+		if err != nil {
+			return fmt.Errorf("failed to parse podcast item key %q in %q: %w", k, s.Bucket, err)
+		}
+
 		if err := b.Delete(k); err != nil {
 			return fmt.Errorf("failed to remove podcast item: %w", err)
 		}
 
-		if err := json.Unmarshal(v, &item); err != nil {
+		var it boltPodcastItem
+		if err := json.Unmarshal(v, &it); err != nil {
 			return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
+		}
+
+		item = PodcastItem{
+			Description{it.Title, it.Description},
+			it.Type,
+			it.Author,
+			it.OriginalURL,
+			it.MediaURL,
+			it.Duration,
+			it.MIMEType,
+			it.ContentLength,
+			addedAt,
+		}
+
+		return nil
+	})
+}
+
+func (s *boltStorage) UpdateDescription(itemID string, desc Description) (PodcastItem, error) {
+	var item PodcastItem
+
+	return item, s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(s.Bucket)
+		if b == nil {
+			return ErrItemNotFound
+		}
+
+		k := []byte(itemID)
+		v := b.Get(k)
+		if v == nil {
+			return ErrItemNotFound
+		}
+
+		addedAt, err := time.Parse(time.RFC3339Nano, string(k))
+		if err != nil {
+			return fmt.Errorf("failed to parse podcast item key %q in %q: %w", k, s.Bucket, err)
+		}
+
+		var it boltPodcastItem
+		if err := json.Unmarshal(v, &it); err != nil {
+			return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
+		}
+
+		it.Title, it.Description = desc.Title, desc.Body
+
+		v, err = json.Marshal(it)
+		if err != nil {
+			return fmt.Errorf("failed to marsha podcast item %q in %q: %w", k, s.Bucket, err)
+		}
+
+		if err := b.Put(k, v); err != nil {
+			return fmt.Errorf("failed to store podcast item: %w", err)
+		}
+
+		item = PodcastItem{
+			Description{it.Title, it.Description},
+			it.Type,
+			it.Author,
+			it.OriginalURL,
+			it.MediaURL,
+			it.Duration,
+			it.MIMEType,
+			it.ContentLength,
+			addedAt,
 		}
 
 		return nil
@@ -194,9 +285,8 @@ func (s *boltStorage) Items() ([]PodcastItem, error) {
 			}
 
 			items = append(items, PodcastItem{
+				Description{item.Title, item.Description},
 				item.Type,
-				item.Title,
-				item.Description,
 				item.Author,
 				item.OriginalURL,
 				item.MediaURL,
