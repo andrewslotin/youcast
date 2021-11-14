@@ -18,19 +18,14 @@ type UploadedMediaProvider struct {
 	uploadServerURL string
 }
 
-func NewUploadedMediaProvider() *UploadedMediaProvider {
-	tmp := path.Join(os.TempDir(), "youcast")
-	if err := os.MkdirAll(tmp, os.ModePerm); err != nil && !os.IsExist(err) {
-		log.Fatalf("failed to create temporary directory %s: %s", tmp, err)
-	}
-
-	u, err := startUploadedMediaServer(tmp)
+func NewUploadedMediaProvider(cachePath string) *UploadedMediaProvider {
+	u, err := startUploadedMediaServer(cachePath)
 	if err != nil {
 		log.Fatalf("failed to start upload server: %s", err)
 	}
 
 	return &UploadedMediaProvider{
-		cachePath:       tmp,
+		cachePath:       cachePath,
 		uploadServerURL: u,
 	}
 }
@@ -86,8 +81,6 @@ func (p *UploadedMediaProvider) HandleRequest(w http.ResponseWriter, req *http.R
 
 	tmpFd.Seek(0, 0)
 	if m, err := tag.ReadFrom(tmpFd); err == nil {
-		log.Println(">>>>> ", m.Album())
-
 		if a := m.Artist(); a != "" {
 			meta.Author = a
 		} else if a = m.AlbumArtist(); a != "" {

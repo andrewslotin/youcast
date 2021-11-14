@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -58,7 +59,12 @@ func main() {
 	}, svc)
 
 	srv.RegisterProvider("/yt", &YouTubeProvider{})
-	srv.RegisterProvider("/my", NewUploadedMediaProvider())
+
+	cachePath := path.Join(args.StoragePath, "tmp")
+	if err := os.MkdirAll(cachePath, os.ModePerm); err != nil && !os.IsExist(err) {
+		log.Fatalf("failed to create temporary directory %s: %s", cachePath, err)
+	}
+	srv.RegisterProvider("/my", NewUploadedMediaProvider(cachePath))
 
 	if token, ok := os.LookupEnv("TELEGRAM_API_TOKEN"); ok {
 		p, err := NewTelegramProvider(token, os.Getenv("TELEGRAM_API_ENDPOINT"), os.Getenv("TELEGRAM_FILE_SERVER"))
