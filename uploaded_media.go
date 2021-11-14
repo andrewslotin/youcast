@@ -113,11 +113,12 @@ type UploadedMedia struct {
 
 func (m UploadedMedia) Metadata(ctx context.Context) (Metadata, error) {
 	return Metadata{
-		Type:     UploadedItem,
-		Author:   m.Author,
-		Title:    m.Title,
-		Duration: m.Duration,
-		MIMEType: m.MIMEType,
+		Type:        UploadedItem,
+		Author:      m.Author,
+		Title:       m.Title,
+		Description: m.Title,
+		Duration:    m.Duration,
+		MIMEType:    m.MIMEType,
 	}, nil
 }
 
