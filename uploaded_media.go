@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"time"
+
+	"github.com/dhowden/tag"
 )
 
 type UploadedMediaProvider struct {
@@ -54,6 +57,7 @@ func (p *UploadedMediaProvider) HandleRequest(w http.ResponseWriter, req *http.R
 
 		return nil
 	}
+	defer tmpFd.Close()
 
 	if _, err := io.Copy(tmpFd, fd); err != nil {
 		log.Printf("failed to copy uploaded file to %s: %s", tmpPath, err)
@@ -62,7 +66,7 @@ func (p *UploadedMediaProvider) HandleRequest(w http.ResponseWriter, req *http.R
 		return nil
 	}
 
-	if err := tmpFd.Close(); err != nil {
+	if err := tmpFd.Sync(); err != nil {
 		log.Printf("failed to store uploaded file to %s: %s", tmpPath, err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 
@@ -71,14 +75,43 @@ func (p *UploadedMediaProvider) HandleRequest(w http.ResponseWriter, req *http.R
 
 	log.Printf("stored uploaded file to %s", tmpPath)
 
-	return UploadedMedia{
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+
+	meta := UploadedMedia{
 		FileName:    header.Filename,
+		Title:       header.Filename,
 		MIMEType:    header.Header.Get("Content-Type"),
 		downloadURL: p.uploadServerURL + "/" + header.Filename,
 	}
+
+	tmpFd.Seek(0, 0)
+	if m, err := tag.ReadFrom(tmpFd); err == nil {
+		log.Println(">>>>> ", m.Album())
+
+		if a := m.Artist(); a != "" {
+			meta.Author = a
+		} else if a = m.AlbumArtist(); a != "" {
+			meta.Author = a
+		}
+
+		if t := m.Title(); t != "" {
+			meta.Title = m.Title()
+		}
+
+		if t := m.Album(); t != "" {
+			meta.Title = t + ": " + meta.Title
+		}
+	} else {
+		log.Printf("failed to read uploaded file metadata: %s", err)
+	}
+
+	return meta
 }
 
 type UploadedMedia struct {
+	Author   string
+	Title    string
+	Duration time.Duration
 	FileName string
 	MIMEType string
 
@@ -88,8 +121,9 @@ type UploadedMedia struct {
 func (m UploadedMedia) Metadata(ctx context.Context) (Metadata, error) {
 	return Metadata{
 		Type:     UploadedItem,
-		Title:    m.FileName,
-		Author:   "Uploaded media",
+		Author:   m.Author,
+		Title:    m.Title,
+		Duration: m.Duration,
 		MIMEType: m.MIMEType,
 	}, nil
 }
