@@ -61,10 +61,23 @@
             <i class="material-icons left">rss_feed</i>Subscribe
           </a>
         </div>
-        {{ if .Items }}
         <div class="row">
             <h2>Feed</h2>
         </div>
+        <div class="row">
+          <form action="/add/my" method="POST" enctype="multipart/form-data">
+            <div class="file-field input-field">
+              <div class="btn">
+                <span>Select media file</span>
+                <input id="upload-media-file" type="file" name="media">
+              </div>
+              <div class="file-path-wrapper">
+                <input class="file-path validate" type="text" placeholder="Upload a new podcast item">
+              </div>
+            </div>
+          </form>
+        </div>
+        {{ if .Items }}
         <div class="row">
             <ul id="playlist" class="collection">
                 {{ range $i, $item := .Items }}
@@ -194,6 +207,10 @@
 
         document.querySelectorAll("#playlist [id^='audio-control-']").forEach(function (el) {
             el.addEventListener("click", togglePlayButton);
+        });
+
+        document.querySelector("#upload-media-file").addEventListener("change", function (event) {
+            event.target.closest("form").submit();
         });
     })(window);
     </script>
