@@ -60,7 +60,7 @@ func main() {
 
 	srv.RegisterProvider("/yt", &YouTubeProvider{})
 
-	cachePath := path.Join(args.StoragePath, "tmp")
+	cachePath := path.Join(os.TempDir(), "youcast")
 	if err := os.MkdirAll(cachePath, os.ModePerm); err != nil && !os.IsExist(err) {
 		log.Fatalf("failed to create temporary directory %s: %s", cachePath, err)
 	}
