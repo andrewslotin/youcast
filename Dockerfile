@@ -20,6 +20,7 @@ ARG APP_UID
 RUN adduser -D -h "/nonexistent" -u "${APP_UID}" "${APP_USER}"
 USER $APP_USER:$APP_USER
 
+COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /tmp/youcast /bin/youcast
 
 CMD ["/bin/youcast"]
