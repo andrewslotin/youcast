@@ -20,6 +20,19 @@ const (
 	UploadedItem
 )
 
+func (it PodcastItemType) String() string {
+	switch it {
+	case YouTubeItem:
+		return "YouTube"
+	case TelegramItem:
+		return "Telegram"
+	case UploadedItem:
+		return "Uploaded"
+	default:
+		return "Unknown"
+	}
+}
+
 type Description struct {
 	Title string
 	Body  string
