@@ -84,10 +84,11 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 			},
 			Description: it.Body,
 			Link:        it.OriginalURL,
-			PubDate:     &it.AddedAt,
 		}
 
 		item.AddEnclosure(it.MediaURL, mimeTypeToEnclosureType(it.MIMEType), int64(it.ContentLength))
+		item.AddDuration(int64(it.Duration / time.Second))
+		item.AddPubDate(&it.AddedAt)
 
 		if _, err := p.AddItem(item); err != nil {
 			log.Printf("failed to add %s: %s", it.OriginalURL, err)
