@@ -89,7 +89,6 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 		OriginalURL:   "https://youtube.com/watch?v=" + y.videoID,
 		Title:         video.Title,
 		Author:        video.Author,
-		Description:   video.Title,
 		Duration:      video.Duration,
 		MIMEType:      mimeType,
 		ContentLength: bestAudio.ContentLength,
