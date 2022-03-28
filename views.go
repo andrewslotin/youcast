@@ -89,6 +89,7 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 		item.AddEnclosure(it.MediaURL, mimeTypeToEnclosureType(it.MIMEType), int64(it.ContentLength))
 		item.AddDuration(int64(it.Duration / time.Second))
 		item.AddPubDate(&it.AddedAt)
+		item.AddSummary(itemSummary(it))
 
 		if _, err := p.AddItem(item); err != nil {
 			log.Printf("failed to add %s: %s", it.OriginalURL, err)
@@ -105,4 +106,20 @@ func itemDescription(p PodcastItem) string {
 	}
 
 	return desc
+}
+
+func itemSummary(p PodcastItem) string {
+	var buf strings.Builder
+
+	switch p.Type {
+	case YouTubeItem, TelegramItem:
+		buf.WriteString(`<a href="` + p.OriginalURL + `">` + p.Author + `</a>` + "\n\n")
+	case UploadedItem:
+	}
+
+	if p.Body != "" && p.Body != p.Title {
+		buf.WriteString(p.Body)
+	}
+
+	return strings.TrimSpace(buf.String())
 }
