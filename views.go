@@ -82,7 +82,7 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 				Name:  it.Author,
 				Email: "user@example.com",
 			},
-			Description: it.Body,
+			Description: itemDescription(it),
 			Link:        it.OriginalURL,
 		}
 
@@ -96,4 +96,13 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 	}
 
 	return p.Encode(w)
+}
+
+func itemDescription(p PodcastItem) string {
+	desc := p.Type.String()
+	if p.Author != "" {
+		desc += ": " + p.Author
+	}
+
+	return desc
 }
