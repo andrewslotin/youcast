@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 )
@@ -39,19 +40,29 @@ func NewFeedService(st Storage, storagePath string, c *http.Client) *FeedService
 }
 
 func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
+	ctx := context.Background()
+
 	log.Printf("downloading %s", audioURL)
 
-	filename, written, err := s.downloadFile(context.Background(), audioURL, item.MIMEType)
+	filename, written, err := s.downloadFile(ctx, audioURL, item.MIMEType)
 	if err != nil {
 		return fmt.Errorf("failed to download item: %w", err)
 	}
 
 	log.Printf("downloaded %s to %s (%s written)", audioURL, filename, FileSize(written))
+
+	log.Println("transcoding", filename)
+	if err := s.transcodeFile(ctx, path.Join(s.storagePath, filename)); err != nil {
+		return fmt.Errorf("failed to transcode file: %w", err)
+	}
+
 	item.MediaURL = "/downloads/" + filename
 
 	if err := s.st.Add(item); err != nil {
 		return fmt.Errorf("failed to add item to the feed: %w", err)
 	}
+
+	log.Println("added", audioURL, "to the feed")
 
 	return nil
 }
@@ -129,4 +140,23 @@ func (s *FeedService) downloadFile(ctx context.Context, u, mimeType string) (str
 	}
 
 	return fileName, written, nil
+}
+
+// ffmpeg -i $filePath -c:a copy -vn $tempFile
+func (s *FeedService) transcodeFile(ctx context.Context, filePath string) error {
+	ext := path.Ext(filePath)
+	tempFile := strings.TrimSuffix(filePath, ext) + ".tmp" + ext
+	defer os.Remove(tempFile)
+
+	out, err := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", filePath, "-c:a", "copy", "-vn", tempFile).CombinedOutput()
+	if err != nil {
+		log.Println("ffmpeg responded with", string(out))
+		return fmt.Errorf("failed to transcode file: %w", err)
+	}
+
+	if err := os.Rename(tempFile, filePath); err != nil {
+		return fmt.Errorf("failed to rename %s to %s: %w", tempFile, filePath, err)
+	}
+
+	return nil
 }
