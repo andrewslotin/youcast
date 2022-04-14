@@ -1,7 +1,9 @@
-FROM golang:1.18 AS builder
+FROM golang:1.18-alpine AS builder
 
 ARG APP_USER=appuser
 ARG APP_UID
+
+RUN apk add --no-cache git mercurial
 
 WORKDIR $GOPATH/github.com/andrewslotin/youcast
 
@@ -12,7 +14,7 @@ COPY . ./
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-w -s -extldflags "-static"' -a -o /tmp/youcast .
 
-FROM busybox
+FROM alpine
 
 ARG APP_USER=appuser
 ARG APP_UID
