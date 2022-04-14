@@ -14,7 +14,7 @@ COPY . ./
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-w -s -extldflags "-static"' -a -o /tmp/youcast .
 
-FROM alpine
+FROM jrottenberg/ffmpeg:5.0-alpine
 
 ARG APP_USER=appuser
 ARG APP_UID
@@ -25,4 +25,4 @@ USER $APP_USER:$APP_USER
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /tmp/youcast /bin/youcast
 
-CMD ["/bin/youcast"]
+ENTRYPOINT ["/bin/youcast"]
