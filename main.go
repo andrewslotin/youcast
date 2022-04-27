@@ -24,6 +24,8 @@ var args struct {
 }
 
 func main() {
+	log.Println("YouCast version", Version)
+
 	flag.StringVar(&args.ListenAddr, "l", os.Getenv("LISTEN_ADDR"), "Listen address")
 	flag.StringVar(&args.DBPath, "db", os.Getenv("DB_PATH"), "Path to the database")
 	flag.StringVar(&args.StoragePath, "storage-dir", os.Getenv("STORAGE_PATH"), "Path to the directory where to store downloaded files")
@@ -111,7 +113,7 @@ func main() {
 		}
 	}
 
-	log.Println("starting server on ", args.ListenAddr, "...")
+	log.Println("starting server on", args.ListenAddr, "...")
 	if err := http.ListenAndServe(args.ListenAddr, CORSMiddleware(srv.ServeMux())); err != nil {
 		log.Fatalln(err)
 	}

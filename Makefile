@@ -10,6 +10,6 @@ latest: $(VERSION)
 	docker tag $(IMAGE):$< $(IMAGE):$@
 
 $(VERSION):
-	docker build --build-arg APP_UID=$(APP_UID) -t $(IMAGE):$@ .
+	docker build --build-arg APP_UID=$(APP_UID) --build-arg VERSION=$(VERSION) -t $(IMAGE):$@ .
 
 .PHONY: push latest $(VERSION)

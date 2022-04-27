@@ -2,6 +2,7 @@ FROM golang:1.18-alpine AS builder
 
 ARG APP_USER=appuser
 ARG APP_UID
+ARG VERSION=n/a
 
 RUN apk add --no-cache git mercurial
 
@@ -12,7 +13,7 @@ RUN go mod download
 
 COPY . ./
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-w -s -extldflags "-static"' -a -o /tmp/youcast .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s -extldflags '-static' -X 'main.Version=${VERSION}'" -a -o /tmp/youcast .
 
 FROM jrottenberg/ffmpeg:5.0-alpine
 
