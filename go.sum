@@ -116,6 +116,8 @@ github.com/dop251/goja v0.0.0-20211022113120-dc8c55024d06/go.mod h1:R9ET47fwRVRP
 github.com/dop251/goja v0.0.0-20220719153422-38a3647bcce0/go.mod h1:1jWwHOtOkEqsfX6tYsufUc7BBTuGHH2ekiJabpkN4CA=
 github.com/dop251/goja v0.0.0-20220815083517-0c74f9139fd6 h1:xHdUVG+c8SWJnct16Z3QJOVlaYo3OwoJyamo6kR6OL0=
 github.com/dop251/goja v0.0.0-20220815083517-0c74f9139fd6/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
+github.com/dop251/goja v0.0.0-20220915101355-d79e1b125a30 h1:ygMJa3f5Uw4JHQo9n52aSFHYxdRvZWPOoihpDK8hCPs=
+github.com/dop251/goja v0.0.0-20220915101355-d79e1b125a30/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
 github.com/dop251/goja_nodejs v0.0.0-20210225215109-d91c329300e7/go.mod h1:hn7BA7c8pLvoGndExHudxTDKZ84Pyvv+90pbBjbTz0Y=
 github.com/dop251/goja_nodejs v0.0.0-20211022123610-8dd9abb0616d/go.mod h1:DngW8aVqWbuLRMHItjPUyqdj+HWPvnQe8V8y1nDpIbM=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
@@ -279,6 +281,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kkdai/youtube/v2 v2.7.16-0.20220814133111-5a2a7203e451 h1:2qjWQ7WuDafgY3UnTYJeFfJEt+vbW2FX+TEwJqWefjQ=
 github.com/kkdai/youtube/v2 v2.7.16-0.20220814133111-5a2a7203e451/go.mod h1:O50Otpjmw7EqO2TlcJWc4ARov1J/0SijYAMdbLRh4nQ=
+github.com/kkdai/youtube/v2 v2.7.16 h1:mDcZH9XBgIU1ysE8tYzpGs17CDgTzWysjs2mqbJGURg=
+github.com/kkdai/youtube/v2 v2.7.16/go.mod h1:O50Otpjmw7EqO2TlcJWc4ARov1J/0SijYAMdbLRh4nQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=
