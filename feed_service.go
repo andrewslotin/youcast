@@ -44,6 +44,12 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 
 	log.Printf("downloading %s", audioURL)
 
+	tmpFile, written, err := s.downloadFile(ctx, audioURL)
+	if err != nil {
+		return fmt.Errorf("failed to download item: %w", err)
+	}
+	defer os.Remove(tmpFile) // in case it still exists
+
 	filePath := path.Join(s.storagePath, fmt.Sprintf("%x", sha256.Sum256([]byte(audioURL))))
 	if exts, err := mime.ExtensionsByType(item.MIMEType); err != nil {
 		log.Printf("failed to get file extensions list for %s: %s", item.MIMEType, err)
@@ -53,9 +59,8 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 		filePath += exts[0]
 	}
 
-	_, written, err := s.downloadFile(ctx, audioURL, filePath)
-	if err != nil {
-		return fmt.Errorf("failed to download item: %w", err)
+	if err := os.Rename(tmpFile, filePath); err != nil {
+		return fmt.Errorf("failed to rename %s to %s: %w", tmpFile, filePath, err)
 	}
 
 	log.Printf("downloaded %s to %s (%s written)", audioURL, filePath, FileSize(written))
@@ -112,7 +117,7 @@ func (s *FeedService) Items() ([]PodcastItem, error) {
 	return items, nil
 }
 
-func (s *FeedService) downloadFile(ctx context.Context, u, filePath string) (string, int64, error) {
+func (s *FeedService) downloadFile(ctx context.Context, u string) (string, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to build a request to %s: %w", u, err)
@@ -128,18 +133,18 @@ func (s *FeedService) downloadFile(ctx context.Context, u, filePath string) (str
 		return "", 0, fmt.Errorf("failed to download %s: server responded with %s", u, resp.Status)
 	}
 
-	fd, err := os.Create(filePath)
+	fd, err := os.CreateTemp("", "youcast*")
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to create %s: %w", filePath, err)
+		return "", 0, fmt.Errorf("failed to create %s: %w", fd.Name(), err)
 	}
 	defer fd.Close()
 
 	written, err := io.Copy(fd, resp.Body)
 	if err != nil {
-		return "", written, fmt.Errorf("failed to download %s to %s: %w", u, filePath, err)
+		return "", written, fmt.Errorf("failed to download %s to %s: %w", u, fd.Name(), err)
 	}
 
-	return filePath, written, nil
+	return fd.Name(), written, nil
 }
 
 // ffmpeg -i $filePath -c:a copy -vn $tempFile
