@@ -50,6 +50,7 @@ const (
 	ItemAdded Status = iota + 1
 	ItemDownloaded
 	ItemReady
+	ItemDownloadFailed
 )
 
 // PodcastItem is a podcast item.
@@ -92,6 +93,11 @@ func (item PodcastItem) ID() string {
 // Playable returns true i/*f the podcast item is ready to be played.
 func (item PodcastItem) Playable() bool {
 	return item.Status == ItemReady
+}
+
+// Failed returns true if the podcast item failed to download.
+func (item PodcastItem) Failed() bool {
+	return item.Status == ItemDownloadFailed
 }
 
 type boltPodcastItem struct {

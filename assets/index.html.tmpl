@@ -86,8 +86,10 @@
                     </form>
                     {{ if $item.Playable }}
                     <i id="audio-control-{{ $i }}" data-audio-id="audio-{{ $i }}" class="material-icons circle red">play_circle_filled</i>
+                    {{ else if $item.Failed }}
+                    <i class="material-icons circle transparent">error</i>
                     {{ else }}
-                    <i class="material-icons circle grey">hourglass_empty</i>
+                    <i class="material-icons circle grey lighten-4">hourglass_empty</i>
                     {{ end }}
                     <form id="update-item-{{ $i }}" action="/feed/{{ .ID }}" method="POST">
                       <input type="hidden" name="action" value="patch"/>

@@ -101,12 +101,14 @@ func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob
 		}
 	}()
 
+	newItemStatus := ItemDownloaded
 	if err := w.downloadFile(ctx, job.SourceURI, job.TargetURI); err != nil {
 		log.Printf("failed to download %s: %s", job.SourceURI, err)
+		newItemStatus = ItemDownloadFailed
 		job.Status = StatusFailed
 	}
 
-	if _, err := w.st.UpdateStatus(job.ItemID, ItemDownloaded); err != nil {
+	if _, err := w.st.UpdateStatus(job.ItemID, newItemStatus); err != nil {
 		if err != ErrItemNotFound {
 			log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
 			job.Status = StatusFailed
@@ -146,13 +148,14 @@ func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJ
 		}
 	}()
 
+	newItemStatus := ItemReady
 	if err := w.convertFile(ctx, job.TargetURI); err != nil {
 		log.Printf("failed to convert %s: %s", job.TargetURI, err)
 		job.Status = StatusFailed
-		return
+		newItemStatus = ItemDownloadFailed
 	}
 
-	if _, err := w.st.UpdateStatus(job.ItemID, ItemReady); err != nil {
+	if _, err := w.st.UpdateStatus(job.ItemID, newItemStatus); err != nil {
 		if err != ErrItemNotFound {
 			log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
 			job.Status = StatusFailed
