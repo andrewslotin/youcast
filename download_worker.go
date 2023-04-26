@@ -107,6 +107,7 @@ func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob
 			return
 		}
 
+		log.Printf("podcast item %s was deleted, cancelling job", job.ItemID)
 		job.Status = StatusCancelled // item was deleted, cancel job
 	}
 
@@ -147,6 +148,7 @@ func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJ
 			return
 		}
 
+		log.Printf("podcast item %s was deleted, cancelling job", job.ItemID)
 		job.Status = StatusCancelled // item was deleted, cancel job
 	}
 
