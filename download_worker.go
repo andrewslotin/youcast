@@ -64,37 +64,9 @@ func (w *DownloadWorker) Run(ctx context.Context, pollDuration time.Duration) {
 
 			switch job.Status {
 			case StatusAdded:
-				if err := w.downloadFile(ctx, job.SourceURI, job.TargetURI); err != nil {
-					log.Printf("failed to download %s: %s", job.SourceURI, err)
-					continue
-				}
-
-				if _, err := w.st.UpdateStatus(job.ItemID, ItemDownloaded); err != nil {
-					log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
-					continue
-				}
-
-				job.Status = StatusDownloaded
-				if err := w.q.Update(job); err != nil {
-					log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
-					continue
-				}
+				go w.handleFileDownload(ctx, job)
 			case StatusDownloaded:
-				if err := w.convertFile(ctx, job.TargetURI); err != nil {
-					log.Printf("failed to convert %s: %s", job.TargetURI, err)
-					continue
-				}
-
-				if _, err := w.st.UpdateStatus(job.ItemID, ItemReady); err != nil {
-					log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
-					continue
-				}
-
-				job.Status = StatusReady
-				if err := w.q.Update(job); err != nil {
-					log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
-					continue
-				}
+				go w.handleFileConversion(ctx, job)
 			default:
 				log.Printf("unexpected job status %q (job id %s)", job.Status, job.ItemID)
 				continue
@@ -122,6 +94,24 @@ func (w *DownloadWorker) resetStaleJobs(ctx context.Context) error {
 	return nil
 }
 
+func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob) {
+	if err := w.downloadFile(ctx, job.SourceURI, job.TargetURI); err != nil {
+		log.Printf("failed to download %s: %s", job.SourceURI, err)
+		return
+	}
+
+	if _, err := w.st.UpdateStatus(job.ItemID, ItemDownloaded); err != nil {
+		log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
+		return
+	}
+
+	job.Status = StatusDownloaded
+	if err := w.q.Update(job); err != nil {
+		log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
+		return
+	}
+}
+
 func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinationPath string) error {
 	log.Printf("downloading %s", sourceURL)
 
@@ -138,6 +128,24 @@ func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinatio
 	log.Printf("downloaded %s to %s (%s written)", sourceURL, destinationPath, FileSize(written))
 
 	return nil
+}
+
+func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJob) {
+	if err := w.convertFile(ctx, job.TargetURI); err != nil {
+		log.Printf("failed to convert %s: %s", job.TargetURI, err)
+		return
+	}
+
+	if _, err := w.st.UpdateStatus(job.ItemID, ItemReady); err != nil {
+		log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
+		return
+	}
+
+	job.Status = StatusReady
+	if err := w.q.Update(job); err != nil {
+		log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
+		return
+	}
 }
 
 func (w *DownloadWorker) convertFile(ctx context.Context, filePath string) error {
