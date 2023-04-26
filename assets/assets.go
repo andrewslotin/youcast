@@ -10,4 +10,7 @@ var (
 
 	//go:embed icon.png
 	Icon []byte
+
+	//go:embed materialize.min.css
+	Stylesheet []byte
 )

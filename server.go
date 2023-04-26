@@ -68,6 +68,7 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux.HandleFunc("/feed", srv.ServeFeed)
 	mux.HandleFunc("/feed/", srv.HandleItem)
 	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
+	mux.HandleFunc("/style.css", srv.ServeStylesheet)
 	mux.HandleFunc("/downloads/", srv.ServeMedia)
 
 	return mux
@@ -141,6 +142,11 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	w.Write(assets.Icon)
+}
+
+func (srv *FeedServer) ServeStylesheet(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/css")
+	w.Write(assets.Stylesheet)
 }
 
 // ServeMedia serves the podcast media files.
