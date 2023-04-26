@@ -18,6 +18,7 @@ const (
 	StatusAdded DownloadStatus = iota + 1
 	StatusDownloaded
 	StatusReady
+	StatusCancelled
 )
 
 // String returns a string representation of the status.
@@ -141,7 +142,7 @@ func (q *DownloadJobQueue) Update(job DownloadJob) error {
 			return err
 		}
 
-		if job.Status == StatusReady {
+		if job.Status == StatusReady || job.Status == StatusCancelled {
 			return b.Delete([]byte(job.ItemID))
 		}
 
