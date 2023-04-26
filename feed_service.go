@@ -46,6 +46,11 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	} else if len(exts) == 0 {
 		log.Printf("no file extension registered for %s", item.MIMEType)
 	} else {
+		if exts[0] == ".f4a" {
+			exts[0] = ".m4a"
+		}
+
+		log.Printf("using %s as file extension for %s", exts[0], item.MIMEType)
 		filePath += exts[0]
 	}
 
@@ -54,7 +59,7 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 		return fmt.Errorf("failed to add item to the feed: %w", err)
 	}
 
-	if err := s.q.Add(DownloadJob{SourceURI: audioURL, TargetURI: filePath}); err != nil {
+	if err := s.q.Add(NewDownloadJob(item.ID(), audioURL, filePath)); err != nil {
 		return fmt.Errorf("failed to add download job for %s: %w", audioURL, err)
 	}
 
