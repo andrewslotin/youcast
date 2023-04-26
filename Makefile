@@ -1,4 +1,4 @@
-REGISTRY ?= nas.local:6000
+REGISTRY ?= ghcr.io/andrewslotin
 APP_UID ?= 1024
 VERSION ?= $(shell date +"%Y%m%d%H%M")
 IMAGE := $(REGISTRY)/youcast
