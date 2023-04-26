@@ -13,6 +13,17 @@ type DownloadService struct {
 	c      *http.Client
 }
 
+func NewDownloadService(tmpDir string, c *http.Client) *DownloadService {
+	if c == nil {
+		c = http.DefaultClient
+	}
+
+	return &DownloadService{
+		tmpDir: tmpDir,
+		c:      c,
+	}
+}
+
 func (svc *DownloadService) DownloadFile(ctx context.Context, u string) (string, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {

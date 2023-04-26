@@ -54,7 +54,7 @@ func main() {
 		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
 	}
 
-	svc := NewFeedService(newBoltStorage("feed", db), args.StoragePath, nil)
+	svc := NewFeedService(newBoltStorage("feed", db), args.StoragePath, NewDownloadService("", nil))
 	srv := NewFeedServer(PodcastMetadata{
 		Title:       "Listen Later",
 		Description: "These videos could have been a podcast...",
