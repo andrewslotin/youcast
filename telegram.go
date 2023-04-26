@@ -62,7 +62,7 @@ func (tg *TelegramProvider) WhitelistUser(id int) {
 	}
 
 	tg.allowedUsers = map[int]struct{}{
-		id: struct{}{},
+		id: {},
 	}
 }
 
