@@ -58,7 +58,7 @@ func main() {
 	svc := NewFeedService(
 		newBoltStorage("feed", db),
 		args.StoragePath,
-		NewDownloadService("", nil),
+		NewHTTPDownloader("", nil),
 		NewFFMpeg(),
 	)
 

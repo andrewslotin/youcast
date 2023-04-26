@@ -8,26 +8,26 @@ import (
 	"os"
 )
 
-// DownloadService is a service that downloads files.
-type DownloadService struct {
+// HTTPDownloader is a service that downloads files via HTTP.
+type HTTPDownloader struct {
 	tmpDir string
 	c      *http.Client
 }
 
-// NewDownloadService creates a new DownloadService instance.
-func NewDownloadService(tmpDir string, c *http.Client) *DownloadService {
+// NewHTTPDownloader creates a new HTTPDownloader instance.
+func NewHTTPDownloader(tmpDir string, c *http.Client) *HTTPDownloader {
 	if c == nil {
 		c = http.DefaultClient
 	}
 
-	return &DownloadService{
+	return &HTTPDownloader{
 		tmpDir: tmpDir,
 		c:      c,
 	}
 }
 
 // DownloadFile downloads a file from the given URL.
-func (svc *DownloadService) DownloadFile(ctx context.Context, u string) (string, int64, error) {
+func (svc *HTTPDownloader) DownloadFile(ctx context.Context, u string) (string, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to build a request to %s: %w", u, err)
