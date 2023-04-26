@@ -64,9 +64,12 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	log.Printf("downloaded %s to %s (%s written)", audioURL, filePath, FileSize(written))
 
 	log.Println("transcoding", filePath)
-	if err := s.transcodeFile(ctx, filePath); err != nil {
+	transcodedSize, err := s.transcodeFile(ctx, filePath)
+	if err != nil {
 		return fmt.Errorf("failed to transcode file: %w", err)
 	}
+
+	log.Printf("transcoded %s (new size %s)", audioURL, FileSize(transcodedSize))
 
 	item.MediaURL = "/downloads/" + path.Base(filePath)
 
@@ -116,7 +119,7 @@ func (s *FeedService) Items() ([]PodcastItem, error) {
 }
 
 // ffmpeg -i $filePath -c:a copy -vn $tempFile
-func (s *FeedService) transcodeFile(ctx context.Context, filePath string) error {
+func (s *FeedService) transcodeFile(ctx context.Context, filePath string) (int64, error) {
 	ext := path.Ext(filePath)
 	tempFile := strings.TrimSuffix(filePath, ext) + ".tmp" + ext
 	defer os.Remove(tempFile)
@@ -124,12 +127,17 @@ func (s *FeedService) transcodeFile(ctx context.Context, filePath string) error 
 	out, err := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", filePath, "-c:a", "copy", "-vn", tempFile).CombinedOutput()
 	if err != nil {
 		log.Println("ffmpeg responded with", string(out))
-		return fmt.Errorf("failed to transcode file: %w", err)
+		return 0, fmt.Errorf("failed to transcode file: %w", err)
+	}
+
+	fi, err := os.Stat(tempFile)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get file info for %s: %w", tempFile, err)
 	}
 
 	if err := os.Rename(tempFile, filePath); err != nil {
-		return fmt.Errorf("failed to rename %s to %s: %w", tempFile, filePath, err)
+		return 0, fmt.Errorf("failed to rename %s to %s: %w", tempFile, filePath, err)
 	}
 
-	return nil
+	return fi.Size(), nil
 }
