@@ -42,6 +42,10 @@ func (w *DownloadWorker) Run(ctx context.Context, pollDuration time.Duration) {
 	log.Printf("starting download worker with poll duration %s", pollDuration)
 	defer log.Print("download worker stopped")
 
+	if err := w.resetStaleJobs(ctx); err != nil {
+		log.Printf("failed to reset stale jobs: %s", err)
+	}
+
 	c := time.Tick(pollDuration)
 
 	for {
@@ -97,6 +101,25 @@ func (w *DownloadWorker) Run(ctx context.Context, pollDuration time.Duration) {
 			}
 		}
 	}
+}
+
+func (w *DownloadWorker) resetStaleJobs(ctx context.Context) error {
+	log.Println("resetting stale jobs")
+
+	jobs, err := w.q.All()
+	if err != nil {
+		return fmt.Errorf("failed to fetch jobs: %w", err)
+	}
+
+	for _, job := range jobs {
+		if err := w.q.Update(job); err != nil {
+			return fmt.Errorf("failed to reset job %s: %w", job.ItemID, err)
+		}
+	}
+
+	log.Printf("reset %d stale jobs", len(jobs))
+
+	return nil
 }
 
 func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinationPath string) error {
