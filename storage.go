@@ -88,6 +88,11 @@ func (item PodcastItem) ID() string {
 	return item.AddedAt.UTC().Format(time.RFC3339Nano)
 }
 
+// Playable returns true i/*f the podcast item is ready to be played.
+func (item PodcastItem) Playable() bool {
+	return item.Status == ItemReady
+}
+
 type boltPodcastItem struct {
 	Type          PodcastItemType `json:",omitempty"`
 	Title         string          `json:",omitempty"`

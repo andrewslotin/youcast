@@ -85,6 +85,10 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 	p.AddImage(feed.IconURL)
 
 	for _, it := range feed.Items {
+		if !it.Playable() {
+			continue // skip incomplete items
+		}
+
 		item := podcast.Item{
 			Title: it.Title,
 			Author: &podcast.Author{
