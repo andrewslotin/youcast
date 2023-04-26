@@ -11,29 +11,31 @@ import (
 	"strings"
 )
 
-type Storage interface {
+type storage interface {
 	Add(PodcastItem) error
 	Remove(string) (PodcastItem, error)
 	UpdateDescription(string, Description) (PodcastItem, error)
 	Items() ([]PodcastItem, error)
 }
 
-type FileDownloader interface {
+type fileDownloader interface {
 	DownloadFile(context.Context, string) (string, int64, error)
 }
 
-type MediaTranscoder interface {
+type mediaTranscoder interface {
 	TranscodeMedia(context.Context, string) (int64, error)
 }
 
+// FeedService is a service that manages podcast items.
 type FeedService struct {
-	downloader  FileDownloader
-	converter   MediaTranscoder
-	st          Storage
+	downloader  fileDownloader
+	converter   mediaTranscoder
+	st          storage
 	storagePath string
 }
 
-func NewFeedService(st Storage, storagePath string, downloader FileDownloader, converter MediaTranscoder) *FeedService {
+// NewFeedService creates a new FeedService instance.
+func NewFeedService(st storage, storagePath string, downloader fileDownloader, converter mediaTranscoder) *FeedService {
 	return &FeedService{
 		st:          st,
 		downloader:  downloader,
@@ -42,6 +44,7 @@ func NewFeedService(st Storage, storagePath string, downloader FileDownloader, c
 	}
 }
 
+// AddItem adds a new podcast item to the feed.
 func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	ctx := context.Background()
 
@@ -87,6 +90,7 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	return nil
 }
 
+// UpdateItem updates an existing podcast item.
 func (s *FeedService) UpdateItem(itemID string, desc Description) error {
 	log.Printf("updating %s", itemID)
 
@@ -98,6 +102,7 @@ func (s *FeedService) UpdateItem(itemID string, desc Description) error {
 	return nil
 }
 
+// RemoveItem removes an existing podcast item.
 func (s *FeedService) RemoveItem(itemID string) error {
 	log.Printf("removing %s", itemID)
 
@@ -114,6 +119,7 @@ func (s *FeedService) RemoveItem(itemID string) error {
 	return nil
 }
 
+// Items returns a list of podcast items.
 func (s *FeedService) Items() ([]PodcastItem, error) {
 	items, err := s.st.Items()
 	if err != nil {

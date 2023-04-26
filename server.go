@@ -14,12 +14,14 @@ import (
 	"github.com/eduncan911/podcast"
 )
 
+// PodcastMetadata contains metadata for the podcast feed.
 type PodcastMetadata struct {
 	Title       string
 	Link        string
 	Description string
 }
 
+// Metadata contains metadata for a podcast item
 type Metadata struct {
 	Type          PodcastItemType
 	OriginalURL   string
@@ -41,12 +43,14 @@ type audioSourceProvider interface {
 	HandleRequest(http.ResponseWriter, *http.Request) audioSource
 }
 
+// FeedServer is an HTTP server that serves podcast feeds and manages podcast items.
 type FeedServer struct {
 	svc       *FeedService
 	meta      PodcastMetadata
 	providers map[string]audioSourceProvider
 }
 
+// NewFeedServer creates a new FeedServer instance.
 func NewFeedServer(meta PodcastMetadata, svc *FeedService) *FeedServer {
 	return &FeedServer{
 		svc:       svc,
@@ -55,6 +59,7 @@ func NewFeedServer(meta PodcastMetadata, svc *FeedService) *FeedServer {
 	}
 }
 
+// ServeMux returns a ServeMux instance that can be used to serve the podcast feed.
 func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
@@ -68,11 +73,13 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	return mux
 }
 
+// RegisterProvider registers a new audio source provider.
 func (srv *FeedServer) RegisterProvider(subPath string, p audioSourceProvider) {
 	log.Printf("requests sent to /add%s will be handled by %s provider", subPath, p.Name())
 	srv.providers[subPath] = p
 }
 
+// ServeFeed serves the podcast feed.
 func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	scheme := reqScheme(req)
 
@@ -130,11 +137,13 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// ServeIcon serves the favicon.ico file for the podcast feed.
 func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	w.Write(assets.Icon)
 }
 
+// ServeMedia serves the podcast media files.
 func (srv *FeedServer) ServeMedia(w http.ResponseWriter, req *http.Request) {
 	fileName := path.Base(req.URL.Path)
 	filePath := path.Join(srv.svc.storagePath, fileName)
@@ -164,6 +173,7 @@ func (srv *FeedServer) ServeMedia(w http.ResponseWriter, req *http.Request) {
 	http.ServeContent(w, req, fileName, fi.ModTime(), fd)
 }
 
+// HandleItem handles requests to add a new podcast item.
 func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 	p, ok := srv.providers[strings.TrimPrefix(req.URL.Path, "/add")]
 	if !ok {
@@ -199,6 +209,7 @@ func (srv *FeedServer) HandleAddItem(w http.ResponseWriter, req *http.Request) {
 	}()
 }
 
+// HandleItem handles requests to update or remove a podcast item.
 func (srv *FeedServer) HandleItem(w http.ResponseWriter, req *http.Request) {
 	switch {
 	case req.Method == http.MethodDelete:
@@ -212,6 +223,7 @@ func (srv *FeedServer) HandleItem(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// HandleRemoveItem handles requests to remove a podcast item.
 func (srv *FeedServer) HandleRemoveItem(w http.ResponseWriter, req *http.Request) {
 	itemID := req.URL.Path[strings.LastIndexByte(req.URL.Path, '/')+1:]
 	if err := srv.svc.RemoveItem(itemID); err != nil {
@@ -221,6 +233,7 @@ func (srv *FeedServer) HandleRemoveItem(w http.ResponseWriter, req *http.Request
 	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 }
 
+// HandleUpdateItem handles requests to update a podcast item.
 func (srv *FeedServer) HandleUpdateItem(w http.ResponseWriter, req *http.Request) {
 	itemID := req.URL.Path[strings.LastIndexByte(req.URL.Path, '/')+1:]
 

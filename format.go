@@ -2,8 +2,10 @@ package main
 
 import "strconv"
 
+// FileSize is a file size in bytes.
 type FileSize int64
 
+// String returns a human-readable representation of the file size.
 func (fs FileSize) String() string {
 	switch {
 	case fs > 2<<39: // TB

@@ -14,6 +14,7 @@ import (
 	"github.com/eduncan911/podcast"
 )
 
+// Feed contains data for a podcast feed.
 type Feed struct {
 	URL, IconURL       string
 	Title, Description string
@@ -21,8 +22,10 @@ type Feed struct {
 	Items              []PodcastItem
 }
 
+// Templates contains parsed templates.
 var Templates = ParseTemplates(assets.Templates)
 
+// ParseTemplates parses templates from the given file system.
 func ParseTemplates(fs fs.FS) *template.Template {
 	return template.Must(template.New("").
 		Funcs(template.FuncMap{
@@ -48,24 +51,30 @@ func ParseTemplates(fs fs.FS) *template.Template {
 		ParseFS(fs, "*.html.tmpl"))
 }
 
+// HTMLRenderer renders a podcast feed as HTML.
 type HTMLRenderer struct {
 	Template *template.Template
 }
 
+// ContentType returns the content type of the rendered feed.
 func (HTMLRenderer) ContentType() string {
 	return "text/html; charset=utf-8"
 }
 
+// Render renders the feed to the given writer.
 func (r HTMLRenderer) Render(w io.Writer, feed Feed) error {
 	return r.Template.Execute(w, feed)
 }
 
+// AtomRenderer renders a podcast feed as Atom.
 type AtomRenderer struct{}
 
+// ContentType returns the content type of the rendered feed.
 func (AtomRenderer) ContentType() string {
 	return "application/xml"
 }
 
+// Render renders the feed to the given writer.
 func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 	var pubDate *time.Time
 	if !feed.PubDate.IsZero() {

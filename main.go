@@ -14,6 +14,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+// DefaultDBPath is a default path to the database file
 const DefaultDBPath = "feed.db"
 
 var args struct {

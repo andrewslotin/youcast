@@ -13,20 +13,25 @@ import (
 	"github.com/kkdai/youtube/v2"
 )
 
+// ErrNoAudio is returned when no suitable audio formats are found for a YouTube video.
 var ErrNoAudio = errors.New("no audio formats found")
 
+// YouTubeVideo is a YouTube video that provides audio files to the podcast feed.
 type YouTubeVideo struct {
 	c       youtube.Client
 	videoID string
 	log     *log.Logger
 }
 
+// YouTubeProvider is a YouTube video that provides audio files to the podcast feed.
 type YouTubeProvider struct{}
 
+// NewYouTubeProvider creates a new YouTubeProvider instance.
 func (yt *YouTubeProvider) Name() string {
 	return "YouTube video"
 }
 
+// HandleRequest handles a request for a YouTube video.
 func (yt *YouTubeProvider) HandleRequest(w http.ResponseWriter, req *http.Request) audioSource {
 	u := req.FormValue("url")
 	if u == "" {
@@ -59,6 +64,7 @@ func extractYouTubeID(s string) (string, error) {
 	return id, nil
 }
 
+// NewYouTubeVideo creates a new YouTubeVideo instance.
 func NewYouTubeVideo(videoID string) *YouTubeVideo {
 	return &YouTubeVideo{
 		videoID: videoID,
@@ -66,6 +72,7 @@ func NewYouTubeVideo(videoID string) *YouTubeVideo {
 	}
 }
 
+// Metadata returns the metadata for the YouTube video.
 func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 	video, err := y.c.GetVideoContext(ctx, y.videoID)
 	if err != nil {
@@ -95,6 +102,7 @@ func (y *YouTubeVideo) Metadata(ctx context.Context) (Metadata, error) {
 	}, nil
 }
 
+// DownloadURL returns the URL to download the YouTube video.
 func (y *YouTubeVideo) DownloadURL(ctx context.Context) (string, error) {
 	u, _, err := y.bestAudio(ctx)
 	return u, err

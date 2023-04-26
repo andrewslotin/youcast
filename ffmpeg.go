@@ -10,12 +10,15 @@ import (
 	"strings"
 )
 
+// FFMpeg is a wrapper around ffmpeg command line tool.
 type FFMpeg struct{}
 
+// NewFFMpeg creates a new FFMpeg instance.
 func NewFFMpeg() *FFMpeg {
 	return &FFMpeg{}
 }
 
+// TranscodeMedia transcodes the media file at filePath to a format suitable for podcast items using following command:
 // ffmpeg -i $filePath -c:a copy -vn $tempFile
 func (svc *FFMpeg) TranscodeMedia(ctx context.Context, filePath string) (int64, error) {
 	ext := path.Ext(filePath)

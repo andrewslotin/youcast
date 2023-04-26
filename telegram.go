@@ -16,14 +16,17 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
+// ErrUserNotAllowed is returned when a user is not allowed to send commands to the bot.
 var ErrUserNotAllowed = errors.New("user was not whitelisted")
 
+// TelegramProvider is a Telegram bot that provides audio files to the podcast feed.
 type TelegramProvider struct {
 	api             *tgbotapi.BotAPI
 	mediaServiceURL *url.URL
 	allowedUsers    map[int]struct{}
 }
 
+// NewTelegramProvider creates a new TelegramProvider instance.
 func NewTelegramProvider(token, apiEndpoint, mediaServiceURL string) (*TelegramProvider, error) {
 	if apiEndpoint == "" {
 		apiEndpoint = tgbotapi.APIEndpoint
@@ -54,6 +57,7 @@ func NewTelegramProvider(token, apiEndpoint, mediaServiceURL string) (*TelegramP
 	return p, nil
 }
 
+// WhitelistUser allows a user to send commands to the bot.
 func (tg *TelegramProvider) WhitelistUser(id int) {
 	log.Printf("allowing user with id %d to send commands to bot", id)
 	if tg.allowedUsers != nil {
@@ -66,10 +70,12 @@ func (tg *TelegramProvider) WhitelistUser(id int) {
 	}
 }
 
+// Name returns the name of the provider.
 func (tg *TelegramProvider) Name() string {
 	return "Telegram"
 }
 
+// HandleRequest handles an incoming request from Telegram.
 func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Request) audioSource {
 	msg := &tgbotapi.Message{}
 	if err := json.NewDecoder(req.Body).Decode(&struct {
@@ -95,6 +101,7 @@ func (tg *TelegramProvider) HandleRequest(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+// HandleMessage handles an incoming message from Telegram.
 func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessage, error) {
 	if tg.allowedUsers != nil {
 		if _, ok := tg.allowedUsers[msg.From.ID]; !ok {
@@ -173,6 +180,7 @@ func (tg *TelegramProvider) HandleMessage(msg *tgbotapi.Message) (*TelegramMessa
 	}, nil
 }
 
+// Updates listens for incoming messages from Telegram and returns them as a channel.
 func (tg *TelegramProvider) Updates(ctx context.Context) (<-chan *TelegramMessage, error) {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -212,6 +220,7 @@ func (tg *TelegramProvider) Updates(ctx context.Context) (<-chan *TelegramMessag
 	return res, nil
 }
 
+// HandleCommand handles an incoming command from Telegram.
 func (tg *TelegramProvider) HandleCommand(msg *tgbotapi.Message) {
 	switch strings.ToLower(msg.Text) {
 	case "/start", "/help":
@@ -234,6 +243,7 @@ func (tg *TelegramProvider) sendResponse(msg *tgbotapi.Message, text string, quo
 	}
 }
 
+// TelegramMessage represents a Telegram message with an audio file.
 type TelegramMessage struct {
 	Audio       *tgbotapi.Audio
 	Description string
@@ -241,6 +251,7 @@ type TelegramMessage struct {
 	FileURL     string
 }
 
+// Metadata returns the metadata for the Telegram message.
 func (tg *TelegramMessage) Metadata(ctx context.Context) (Metadata, error) {
 	return Metadata{
 		Type:          TelegramItem,
@@ -254,6 +265,7 @@ func (tg *TelegramMessage) Metadata(ctx context.Context) (Metadata, error) {
 	}, nil
 }
 
+// DownloadURL returns the download URL for the Telegram message.
 func (tg *TelegramMessage) DownloadURL(context.Context) (string, error) {
 	return tg.FileURL, nil
 }

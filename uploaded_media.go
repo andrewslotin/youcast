@@ -13,11 +13,13 @@ import (
 	"github.com/dhowden/tag"
 )
 
+// UploadedMediaProvider is an audio source provider that handles uploaded media files.
 type UploadedMediaProvider struct {
 	cachePath       string
 	uploadServerURL string
 }
 
+// NewUploadedMediaProvider creates a new UploadedMediaProvider instance.
 func NewUploadedMediaProvider(cachePath string) *UploadedMediaProvider {
 	u, err := startUploadedMediaServer(cachePath)
 	if err != nil {
@@ -30,10 +32,12 @@ func NewUploadedMediaProvider(cachePath string) *UploadedMediaProvider {
 	}
 }
 
+// Name returns the name of the provider.
 func (*UploadedMediaProvider) Name() string {
 	return "User media"
 }
 
+// HandleRequest handles an HTTP request and returns an audio source.
 func (p *UploadedMediaProvider) HandleRequest(w http.ResponseWriter, req *http.Request) audioSource {
 	fd, header, err := req.FormFile("media")
 	if err != nil {
@@ -101,6 +105,7 @@ func (p *UploadedMediaProvider) HandleRequest(w http.ResponseWriter, req *http.R
 	return meta
 }
 
+// UploadedMedia is an audio source that represents an uploaded media file.
 type UploadedMedia struct {
 	Author   string
 	Title    string
@@ -111,6 +116,7 @@ type UploadedMedia struct {
 	downloadURL string
 }
 
+// Metadata returns the metadata of the audio source.
 func (m UploadedMedia) Metadata(ctx context.Context) (Metadata, error) {
 	return Metadata{
 		Type:        UploadedItem,
@@ -122,6 +128,7 @@ func (m UploadedMedia) Metadata(ctx context.Context) (Metadata, error) {
 	}, nil
 }
 
+// DownloadURL returns the download URL of the audio source.
 func (m UploadedMedia) DownloadURL(ctx context.Context) (string, error) {
 	return m.downloadURL, nil
 }

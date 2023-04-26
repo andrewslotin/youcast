@@ -10,10 +10,13 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+// ErrItemNotFound is returned when an item is not found in the storage.
 var ErrItemNotFound = errors.New("no such item")
 
+// PodcastItemType is a type of a podcast item.
 type PodcastItemType uint8
 
+// Supported podcast item types.
 const (
 	YouTubeItem PodcastItemType = iota + 1
 	TelegramItem
@@ -33,11 +36,13 @@ func (it PodcastItemType) String() string {
 	}
 }
 
+// Description is a description of a podcast item.
 type Description struct {
 	Title string
 	Body  string
 }
 
+// PodcastItem is a podcast item.
 type PodcastItem struct {
 	Description
 	Type          PodcastItemType
@@ -50,6 +55,7 @@ type PodcastItem struct {
 	AddedAt       time.Time
 }
 
+// NewPodcastItem creates a new podcast item from the given metadata.
 func NewPodcastItem(meta Metadata, addedAt time.Time) PodcastItem {
 	return PodcastItem{
 		Description: Description{

@@ -8,11 +8,13 @@ import (
 	"os"
 )
 
+// DownloadService is a service that downloads files.
 type DownloadService struct {
 	tmpDir string
 	c      *http.Client
 }
 
+// NewDownloadService creates a new DownloadService instance.
 func NewDownloadService(tmpDir string, c *http.Client) *DownloadService {
 	if c == nil {
 		c = http.DefaultClient
@@ -24,6 +26,7 @@ func NewDownloadService(tmpDir string, c *http.Client) *DownloadService {
 	}
 }
 
+// DownloadFile downloads a file from the given URL.
 func (svc *DownloadService) DownloadFile(ctx context.Context, u string) (string, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
