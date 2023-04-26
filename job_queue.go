@@ -19,6 +19,7 @@ const (
 	StatusDownloaded
 	StatusReady
 	StatusCancelled
+	StatusFailed
 )
 
 // String returns a string representation of the status.
@@ -142,7 +143,7 @@ func (q *DownloadJobQueue) Update(job DownloadJob) error {
 			return err
 		}
 
-		if job.Status == StatusReady || job.Status == StatusCancelled {
+		if job.Status == StatusReady || job.Status == StatusCancelled || job.Status == StatusFailed {
 			return b.Delete([]byte(job.ItemID))
 		}
 

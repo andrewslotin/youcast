@@ -95,15 +95,21 @@ func (w *DownloadWorker) resetStaleJobs(ctx context.Context) error {
 }
 
 func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob) {
+	defer func() {
+		if err := w.q.Update(job); err != nil {
+			log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
+		}
+	}()
+
 	if err := w.downloadFile(ctx, job.SourceURI, job.TargetURI); err != nil {
 		log.Printf("failed to download %s: %s", job.SourceURI, err)
-		return
+		job.Status = StatusFailed
 	}
-	job.Status = StatusDownloaded
 
 	if _, err := w.st.UpdateStatus(job.ItemID, ItemDownloaded); err != nil {
 		if err != ErrItemNotFound {
 			log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
+			job.Status = StatusFailed
 			return
 		}
 
@@ -111,10 +117,7 @@ func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob
 		job.Status = StatusCancelled // item was deleted, cancel job
 	}
 
-	if err := w.q.Update(job); err != nil {
-		log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
-		return
-	}
+	job.Status = StatusDownloaded
 }
 
 func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinationPath string) error {
@@ -136,15 +139,23 @@ func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinatio
 }
 
 func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJob) {
+	defer func() {
+		if err := w.q.Update(job); err != nil {
+			log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
+			return
+		}
+	}()
+
 	if err := w.convertFile(ctx, job.TargetURI); err != nil {
 		log.Printf("failed to convert %s: %s", job.TargetURI, err)
+		job.Status = StatusFailed
 		return
 	}
-	job.Status = StatusReady
 
 	if _, err := w.st.UpdateStatus(job.ItemID, ItemReady); err != nil {
 		if err != ErrItemNotFound {
 			log.Printf("failed to update podcast item status for %s: %s", job.ItemID, err)
+			job.Status = StatusFailed
 			return
 		}
 
@@ -152,10 +163,7 @@ func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJ
 		job.Status = StatusCancelled // item was deleted, cancel job
 	}
 
-	if err := w.q.Update(job); err != nil {
-		log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
-		return
-	}
+	job.Status = StatusReady
 }
 
 func (w *DownloadWorker) convertFile(ctx context.Context, filePath string) error {
