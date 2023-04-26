@@ -7,7 +7,6 @@ import (
 	"log"
 	"mime"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 )
@@ -23,16 +22,22 @@ type FileDownloader interface {
 	DownloadFile(context.Context, string) (string, int64, error)
 }
 
+type MediaTranscoder interface {
+	TranscodeMedia(context.Context, string) (int64, error)
+}
+
 type FeedService struct {
 	downloader  FileDownloader
+	converter   MediaTranscoder
 	st          Storage
 	storagePath string
 }
 
-func NewFeedService(st Storage, storagePath string, downloader FileDownloader) *FeedService {
+func NewFeedService(st Storage, storagePath string, downloader FileDownloader, converter MediaTranscoder) *FeedService {
 	return &FeedService{
 		st:          st,
 		downloader:  downloader,
+		converter:   converter,
 		storagePath: storagePath,
 	}
 }
@@ -64,7 +69,7 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	log.Printf("downloaded %s to %s (%s written)", audioURL, filePath, FileSize(written))
 
 	log.Println("transcoding", filePath)
-	transcodedSize, err := s.transcodeFile(ctx, filePath)
+	transcodedSize, err := s.converter.TranscodeMedia(ctx, filePath)
 	if err != nil {
 		return fmt.Errorf("failed to transcode file: %w", err)
 	}
@@ -116,28 +121,4 @@ func (s *FeedService) Items() ([]PodcastItem, error) {
 	}
 
 	return items, nil
-}
-
-// ffmpeg -i $filePath -c:a copy -vn $tempFile
-func (s *FeedService) transcodeFile(ctx context.Context, filePath string) (int64, error) {
-	ext := path.Ext(filePath)
-	tempFile := strings.TrimSuffix(filePath, ext) + ".tmp" + ext
-	defer os.Remove(tempFile)
-
-	out, err := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", filePath, "-c:a", "copy", "-vn", tempFile).CombinedOutput()
-	if err != nil {
-		log.Println("ffmpeg responded with", string(out))
-		return 0, fmt.Errorf("failed to transcode file: %w", err)
-	}
-
-	fi, err := os.Stat(tempFile)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get file info for %s: %w", tempFile, err)
-	}
-
-	if err := os.Rename(tempFile, filePath); err != nil {
-		return 0, fmt.Errorf("failed to rename %s to %s: %w", tempFile, filePath, err)
-	}
-
-	return fi.Size(), nil
 }
