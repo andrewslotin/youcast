@@ -44,19 +44,28 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 
 	log.Printf("downloading %s", audioURL)
 
-	filename, written, err := s.downloadFile(ctx, audioURL, item.MIMEType)
+	filePath := path.Join(s.storagePath, fmt.Sprintf("%x", sha256.Sum256([]byte(audioURL))))
+	if exts, err := mime.ExtensionsByType(item.MIMEType); err != nil {
+		log.Printf("failed to get file extensions list for %s: %s", item.MIMEType, err)
+	} else if len(exts) == 0 {
+		log.Printf("no file extension registered for %s", item.MIMEType)
+	} else {
+		filePath += exts[0]
+	}
+
+	_, written, err := s.downloadFile(ctx, audioURL, filePath)
 	if err != nil {
 		return fmt.Errorf("failed to download item: %w", err)
 	}
 
-	log.Printf("downloaded %s to %s (%s written)", audioURL, filename, FileSize(written))
+	log.Printf("downloaded %s to %s (%s written)", audioURL, filePath, FileSize(written))
 
-	log.Println("transcoding", filename)
-	if err := s.transcodeFile(ctx, path.Join(s.storagePath, filename)); err != nil {
+	log.Println("transcoding", filePath)
+	if err := s.transcodeFile(ctx, filePath); err != nil {
 		return fmt.Errorf("failed to transcode file: %w", err)
 	}
 
-	item.MediaURL = "/downloads/" + filename
+	item.MediaURL = "/downloads/" + path.Base(filePath)
 
 	if err := s.st.Add(item); err != nil {
 		return fmt.Errorf("failed to add item to the feed: %w", err)
@@ -103,7 +112,7 @@ func (s *FeedService) Items() ([]PodcastItem, error) {
 	return items, nil
 }
 
-func (s *FeedService) downloadFile(ctx context.Context, u, mimeType string) (string, int64, error) {
+func (s *FeedService) downloadFile(ctx context.Context, u, filePath string) (string, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to build a request to %s: %w", u, err)
@@ -119,27 +128,18 @@ func (s *FeedService) downloadFile(ctx context.Context, u, mimeType string) (str
 		return "", 0, fmt.Errorf("failed to download %s: server responded with %s", u, resp.Status)
 	}
 
-	fileName := fmt.Sprintf("%x", sha256.Sum256([]byte(u)))
-	if exts, err := mime.ExtensionsByType(mimeType); err != nil {
-		log.Printf("failed to get file extensions list for %s: %s", mimeType, err)
-	} else if len(exts) == 0 {
-		log.Printf("no file extension registered for %s", mimeType)
-	} else {
-		fileName += exts[0]
-	}
-
-	fd, err := os.Create(path.Join(s.storagePath, fileName))
+	fd, err := os.Create(filePath)
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to create %s: %w", fileName, err)
+		return "", 0, fmt.Errorf("failed to create %s: %w", filePath, err)
 	}
 	defer fd.Close()
 
 	written, err := io.Copy(fd, resp.Body)
 	if err != nil {
-		return "", written, fmt.Errorf("failed to download %s to %s: %w", u, fileName, err)
+		return "", written, fmt.Errorf("failed to download %s to %s: %w", u, filePath, err)
 	}
 
-	return fileName, written, nil
+	return filePath, written, nil
 }
 
 // ffmpeg -i $filePath -c:a copy -vn $tempFile
