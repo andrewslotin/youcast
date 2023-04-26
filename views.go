@@ -14,12 +14,18 @@ import (
 	"github.com/eduncan911/podcast"
 )
 
+// DownloadablePodcastItem is a podcast item that is ready to be downloaded.
+type DownloadablePodcastItem struct {
+	PodcastItem
+	MediaURL string
+}
+
 // Feed contains data for a podcast feed.
 type Feed struct {
 	URL, IconURL       string
 	Title, Description string
 	PubDate            time.Time
-	Items              []PodcastItem
+	Items              []DownloadablePodcastItem
 }
 
 // Templates contains parsed templates.
@@ -112,7 +118,7 @@ func (AtomRenderer) Render(w io.Writer, feed Feed) error {
 	return p.Encode(w)
 }
 
-func itemDescription(p PodcastItem) string {
+func itemDescription(p DownloadablePodcastItem) string {
 	desc := p.Type.String()
 	if p.Author != "" {
 		desc += ": " + p.Author
@@ -121,7 +127,7 @@ func itemDescription(p PodcastItem) string {
 	return desc
 }
 
-func itemSummary(p PodcastItem) string {
+func itemSummary(p DownloadablePodcastItem) string {
 	var buf strings.Builder
 
 	switch p.Type {

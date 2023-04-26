@@ -103,11 +103,10 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, item := range items {
-		if !strings.HasPrefix(item.MediaURL, "http://") && !strings.HasPrefix(item.MediaURL, "https://") {
-			item.MediaURL = scheme + "://" + req.Host + item.MediaURL
-		}
-
-		feed.Items = append(feed.Items, item)
+		feed.Items = append(feed.Items, DownloadablePodcastItem{
+			PodcastItem: item,
+			MediaURL:    scheme + "://" + req.Host + "/downloads/" + item.FileName,
+		})
 	}
 
 	if len(items) > 0 {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -57,7 +58,7 @@ type PodcastItem struct {
 	Type          PodcastItemType
 	Author        string
 	OriginalURL   string
-	MediaURL      string
+	FileName      string
 	Duration      time.Duration
 	MIMEType      string
 	ContentLength int64
@@ -99,7 +100,8 @@ type boltPodcastItem struct {
 	Author        string          `json:",omitempty"`
 	Description   string          `json:",omitempty"`
 	OriginalURL   string          `json:",omitempty"`
-	MediaURL      string          `json:",omitempty"`
+	MediaURL      string          `json:",omitempty"` // obsolete
+	FileName      string          `json:",omitempty"`
 	Duration      time.Duration   `json:",omitempty"`
 	MIMEType      string          `json:",omitempty"`
 	ContentLength int64           `json:",omitempty"`
@@ -113,7 +115,8 @@ func newBoltPodcastItem(item PodcastItem) boltPodcastItem {
 		item.Author,
 		item.Body,
 		item.OriginalURL,
-		item.MediaURL,
+		"",
+		item.FileName,
 		item.Duration,
 		item.MIMEType,
 		item.ContentLength,
@@ -180,12 +183,14 @@ func (s *boltStorage) Remove(itemID string) (PodcastItem, error) {
 			return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
 		}
 
+		migrateMediaURL(&it)
+
 		item = PodcastItem{
 			Description{it.Title, it.Description},
 			it.Type,
 			it.Author,
 			it.OriginalURL,
-			it.MediaURL,
+			it.FileName,
 			it.Duration,
 			it.MIMEType,
 			it.ContentLength,
@@ -223,10 +228,11 @@ func (s *boltStorage) UpdateDescription(itemID string, desc Description) (Podcas
 		}
 
 		it.Title, it.Description = desc.Title, desc.Body
+		migrateMediaURL(&it)
 
 		v, err = json.Marshal(it)
 		if err != nil {
-			return fmt.Errorf("failed to marsha podcast item %q in %q: %w", k, s.Bucket, err)
+			return fmt.Errorf("failed to marshal podcast item %q in %q: %w", k, s.Bucket, err)
 		}
 
 		if err := b.Put(k, v); err != nil {
@@ -238,7 +244,7 @@ func (s *boltStorage) UpdateDescription(itemID string, desc Description) (Podcas
 			it.Type,
 			it.Author,
 			it.OriginalURL,
-			it.MediaURL,
+			it.FileName,
 			it.Duration,
 			it.MIMEType,
 			it.ContentLength,
@@ -250,7 +256,7 @@ func (s *boltStorage) UpdateDescription(itemID string, desc Description) (Podcas
 	})
 }
 
-func (s *boltStorage) UpdatStatus(itemID string, newStatus Status) (PodcastItem, error) {
+func (s *boltStorage) UpdateStatus(itemID string, newStatus Status) (PodcastItem, error) {
 	var item PodcastItem
 
 	return item, s.db.Update(func(tx *bolt.Tx) error {
@@ -276,6 +282,7 @@ func (s *boltStorage) UpdatStatus(itemID string, newStatus Status) (PodcastItem,
 		}
 
 		it.Status = newStatus
+		migrateMediaURL(&it)
 
 		v, err = json.Marshal(it)
 		if err != nil {
@@ -291,7 +298,7 @@ func (s *boltStorage) UpdatStatus(itemID string, newStatus Status) (PodcastItem,
 			it.Type,
 			it.Author,
 			it.OriginalURL,
-			it.MediaURL,
+			it.FileName,
 			it.Duration,
 			it.MIMEType,
 			it.ContentLength,
@@ -318,29 +325,37 @@ func (s *boltStorage) Items() ([]PodcastItem, error) {
 				return fmt.Errorf("failed to parse podcast item key %q in %q: %w", k, s.Bucket, err)
 			}
 
-			var item boltPodcastItem
-			if err := json.Unmarshal(v, &item); err != nil {
+			var it boltPodcastItem
+			if err := json.Unmarshal(v, &it); err != nil {
 				return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
 			}
 
-			if item.Status == 0 { // legacy items, assume they are ready
-				item.Status = ItemReady
+			if it.Status == 0 { // legacy items, assume they are ready
+				it.Status = ItemReady
 			}
 
+			migrateMediaURL(&it)
+
 			items = append(items, PodcastItem{
-				Description{item.Title, item.Description},
-				item.Type,
-				item.Author,
-				item.OriginalURL,
-				item.MediaURL,
-				item.Duration,
-				item.MIMEType,
-				item.ContentLength,
+				Description{it.Title, it.Description},
+				it.Type,
+				it.Author,
+				it.OriginalURL,
+				it.FileName,
+				it.Duration,
+				it.MIMEType,
+				it.ContentLength,
 				addedAt,
-				item.Status,
+				it.Status,
 			})
 		}
 
 		return nil
 	})
+}
+
+func migrateMediaURL(it *boltPodcastItem) {
+	if it.FileName == "" {
+		it.FileName = path.Base(it.MediaURL)
+	}
 }

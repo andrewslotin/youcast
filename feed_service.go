@@ -8,7 +8,6 @@ import (
 	"mime"
 	"os"
 	"path"
-	"strings"
 )
 
 type storage interface {
@@ -79,7 +78,7 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 
 	log.Printf("transcoded %s (new size %s)", audioURL, FileSize(transcodedSize))
 
-	item.MediaURL = "/downloads/" + path.Base(filePath)
+	item.FileName = path.Base(filePath)
 	item.Status = ItemReady
 
 	if err := s.st.Add(item); err != nil {
@@ -112,7 +111,7 @@ func (s *FeedService) RemoveItem(itemID string) error {
 		return err
 	}
 
-	filePath := path.Join(s.storagePath, strings.TrimPrefix(item.MediaURL, "/downloads/"))
+	filePath := path.Join(s.storagePath, item.FileName)
 	if err := os.Remove(filePath); err != nil {
 		return fmt.Errorf("failed to delete %s: %w", filePath, err)
 	}
