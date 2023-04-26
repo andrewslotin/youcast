@@ -148,3 +148,34 @@ func (q *DownloadJobQueue) Update(job DownloadJob) error {
 		return b.Put([]byte(job.ItemID), newBoltJob(job).MarshalBinary())
 	})
 }
+
+// All returns all jobs in the queue.
+func (q *DownloadJobQueue) All() ([]DownloadJob, error) {
+	var jobs []DownloadJob
+
+	err := q.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("downloads"))
+		if b == nil {
+			return nil
+		}
+
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var j boltJob
+			if err := json.Unmarshal(v, &j); err != nil {
+				return err
+			}
+
+			jobs = append(jobs, DownloadJob{
+				ItemID:    string(k),
+				Status:    j.Status,
+				SourceURI: j.SourceURI,
+				TargetURI: j.TargetURI,
+			})
+		}
+
+		return nil
+	})
+
+	return jobs, err
+}
