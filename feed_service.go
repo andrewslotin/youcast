@@ -17,14 +17,6 @@ type storage interface {
 	Items() ([]PodcastItem, error)
 }
 
-type fileDownloader interface {
-	DownloadFile(context.Context, string) (string, int64, error)
-}
-
-type mediaTranscoder interface {
-	TranscodeMedia(context.Context, string) (int64, error)
-}
-
 // FeedService is a service that manages podcast items.
 type FeedService struct {
 	downloader  fileDownloader
