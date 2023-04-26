@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -72,63 +71,9 @@ func NewPodcastItem(meta Metadata, addedAt time.Time) PodcastItem {
 	}
 }
 
+// ID returns a unique ID of the podcast item.
 func (item PodcastItem) ID() string {
 	return item.AddedAt.UTC().Format(time.RFC3339Nano)
-}
-
-type memoryStorage struct {
-	mu    sync.RWMutex
-	items []PodcastItem
-}
-
-func (s *memoryStorage) Add(item PodcastItem) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.items = append(s.items, item)
-
-	return nil
-}
-
-func (s *memoryStorage) Remove(itemID string) (PodcastItem, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for i, item := range s.items {
-		if item.ID() == itemID {
-			copy(s.items[i:], s.items[i+1:])
-			s.items = s.items[:len(s.items)-1]
-
-			return item, nil
-		}
-	}
-
-	return PodcastItem{}, ErrItemNotFound
-}
-
-func (s *memoryStorage) UpdateDescription(itemID string, desc Description) (PodcastItem, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for i := range s.items {
-		if s.items[i].ID() == itemID {
-			s.items[i].Description = desc
-
-			return s.items[i], nil
-		}
-	}
-
-	return PodcastItem{}, ErrItemNotFound
-}
-
-func (s *memoryStorage) Items() ([]PodcastItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	items := make([]PodcastItem, len(s.items))
-	copy(items, s.items)
-
-	return items, nil
 }
 
 type boltPodcastItem struct {
