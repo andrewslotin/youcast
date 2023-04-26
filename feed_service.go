@@ -80,6 +80,7 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 	log.Printf("transcoded %s (new size %s)", audioURL, FileSize(transcodedSize))
 
 	item.MediaURL = "/downloads/" + path.Base(filePath)
+	item.Status = ItemReady
 
 	if err := s.st.Add(item); err != nil {
 		return fmt.Errorf("failed to add item to the feed: %w", err)

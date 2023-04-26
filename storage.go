@@ -41,6 +41,16 @@ type Description struct {
 	Body  string
 }
 
+// Status is a status of a podcast item.
+type Status uint8
+
+// Supported podcast item statuses.
+const (
+	ItemAdded Status = iota + 1
+	ItemDownloaded
+	ItemReady
+)
+
 // PodcastItem is a podcast item.
 type PodcastItem struct {
 	Description
@@ -52,6 +62,7 @@ type PodcastItem struct {
 	MIMEType      string
 	ContentLength int64
 	AddedAt       time.Time
+	Status        Status
 }
 
 // NewPodcastItem creates a new podcast item from the given metadata.
@@ -68,6 +79,7 @@ func NewPodcastItem(meta Metadata, addedAt time.Time) PodcastItem {
 		MIMEType:      meta.MIMEType,
 		ContentLength: meta.ContentLength,
 		AddedAt:       addedAt,
+		Status:        ItemAdded,
 	}
 }
 
@@ -86,6 +98,7 @@ type boltPodcastItem struct {
 	Duration      time.Duration   `json:",omitempty"`
 	MIMEType      string          `json:",omitempty"`
 	ContentLength int64           `json:",omitempty"`
+	Status        Status          `json:",omitempty"`
 }
 
 func newBoltPodcastItem(item PodcastItem) boltPodcastItem {
@@ -99,6 +112,7 @@ func newBoltPodcastItem(item PodcastItem) boltPodcastItem {
 		item.Duration,
 		item.MIMEType,
 		item.ContentLength,
+		item.Status,
 	}
 }
 
@@ -171,6 +185,7 @@ func (s *boltStorage) Remove(itemID string) (PodcastItem, error) {
 			it.MIMEType,
 			it.ContentLength,
 			addedAt,
+			it.Status,
 		}
 
 		return nil
@@ -223,6 +238,60 @@ func (s *boltStorage) UpdateDescription(itemID string, desc Description) (Podcas
 			it.MIMEType,
 			it.ContentLength,
 			addedAt,
+			it.Status,
+		}
+
+		return nil
+	})
+}
+
+func (s *boltStorage) UpdatStatus(itemID string, newStatus Status) (PodcastItem, error) {
+	var item PodcastItem
+
+	return item, s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(s.Bucket)
+		if b == nil {
+			return ErrItemNotFound
+		}
+
+		k := []byte(itemID)
+		v := b.Get(k)
+		if v == nil {
+			return ErrItemNotFound
+		}
+
+		addedAt, err := time.Parse(time.RFC3339Nano, string(k))
+		if err != nil {
+			return fmt.Errorf("failed to parse podcast item key %q in %q: %w", k, s.Bucket, err)
+		}
+
+		var it boltPodcastItem
+		if err := json.Unmarshal(v, &it); err != nil {
+			return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
+		}
+
+		it.Status = newStatus
+
+		v, err = json.Marshal(it)
+		if err != nil {
+			return fmt.Errorf("failed to marsha podcast item %q in %q: %w", k, s.Bucket, err)
+		}
+
+		if err := b.Put(k, v); err != nil {
+			return fmt.Errorf("failed to store podcast item: %w", err)
+		}
+
+		item = PodcastItem{
+			Description{it.Title, it.Description},
+			it.Type,
+			it.Author,
+			it.OriginalURL,
+			it.MediaURL,
+			it.Duration,
+			it.MIMEType,
+			it.ContentLength,
+			addedAt,
+			it.Status,
 		}
 
 		return nil
@@ -249,6 +318,10 @@ func (s *boltStorage) Items() ([]PodcastItem, error) {
 				return fmt.Errorf("failed to unmarshal podcast item %q in %q: %w", k, s.Bucket, err)
 			}
 
+			if item.Status == 0 { // legacy items, assume they are ready
+				item.Status = ItemReady
+			}
+
 			items = append(items, PodcastItem{
 				Description{item.Title, item.Description},
 				item.Type,
@@ -259,6 +332,7 @@ func (s *boltStorage) Items() ([]PodcastItem, error) {
 				item.MIMEType,
 				item.ContentLength,
 				addedAt,
+				item.Status,
 			})
 		}
 
