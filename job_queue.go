@@ -42,6 +42,16 @@ type DownloadJob struct {
 	TargetURI string
 }
 
+// NewDownloadJob returns a new instance of DownloadJob.
+func NewDownloadJob(itemID, sourceURI, targetURI string) DownloadJob {
+	return DownloadJob{
+		ItemID:    itemID,
+		Status:    StatusAdded,
+		SourceURI: sourceURI,
+		TargetURI: targetURI,
+	}
+}
+
 // DownloadJobQueue is a queue of download jobs that allows adding, updating and getting jobs.
 type DownloadJobQueue struct {
 	db *bolt.DB

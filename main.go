@@ -55,9 +55,20 @@ func main() {
 		log.Fatalln("failed to open BoltDB file ", args.DBPath, " :", err)
 	}
 
+	storage := newBoltStorage("feed", db)
+
+	jobQueue := NewDownloadJobQueue(db)
+	go NewDownloadWorker(
+		jobQueue,
+		storage,
+		NewHTTPDownloader("", nil),
+		NewFFMpeg(),
+	).Run(context.Background(), 10*time.Second)
+
 	svc := NewFeedService(
-		newBoltStorage("feed", db),
+		storage,
 		args.StoragePath,
+		jobQueue,
 		NewHTTPDownloader("", nil),
 		NewFFMpeg(),
 	)

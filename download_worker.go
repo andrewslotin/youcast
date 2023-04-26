@@ -39,6 +39,9 @@ func NewDownloadWorker(
 }
 
 func (w *DownloadWorker) Run(ctx context.Context, pollDuration time.Duration) {
+	log.Printf("starting download worker with poll duration %s", pollDuration)
+	defer log.Print("download worker stopped")
+
 	c := time.Tick(pollDuration)
 
 	for {

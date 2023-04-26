@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"log"
@@ -19,34 +18,28 @@ type storage interface {
 
 // FeedService is a service that manages podcast items.
 type FeedService struct {
-	downloader  fileDownloader
-	converter   mediaTranscoder
+	q           *DownloadJobQueue
 	st          storage
 	storagePath string
 }
 
 // NewFeedService creates a new FeedService instance.
-func NewFeedService(st storage, storagePath string, downloader fileDownloader, converter mediaTranscoder) *FeedService {
+func NewFeedService(
+	st storage,
+	storagePath string,
+	q *DownloadJobQueue,
+	downloader fileDownloader,
+	converter mediaTranscoder,
+) *FeedService {
 	return &FeedService{
 		st:          st,
-		downloader:  downloader,
-		converter:   converter,
 		storagePath: storagePath,
+		q:           q,
 	}
 }
 
 // AddItem adds a new podcast item to the feed.
 func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
-	ctx := context.Background()
-
-	log.Printf("downloading %s", audioURL)
-
-	tmpFile, written, err := s.downloader.DownloadFile(ctx, audioURL)
-	if err != nil {
-		return fmt.Errorf("failed to download item: %w", err)
-	}
-	defer os.Remove(tmpFile) // in case it still exists
-
 	filePath := path.Join(s.storagePath, fmt.Sprintf("%x", sha256.Sum256([]byte(audioURL))))
 	if exts, err := mime.ExtensionsByType(item.MIMEType); err != nil {
 		log.Printf("failed to get file extensions list for %s: %s", item.MIMEType, err)
@@ -56,28 +49,14 @@ func (s *FeedService) AddItem(item PodcastItem, audioURL string) error {
 		filePath += exts[0]
 	}
 
-	if err := os.Rename(tmpFile, filePath); err != nil {
-		return fmt.Errorf("failed to rename %s to %s: %w", tmpFile, filePath, err)
-	}
-
-	log.Printf("downloaded %s to %s (%s written)", audioURL, filePath, FileSize(written))
-
-	log.Println("transcoding", filePath)
-	transcodedSize, err := s.converter.TranscodeMedia(ctx, filePath)
-	if err != nil {
-		return fmt.Errorf("failed to transcode file: %w", err)
-	}
-
-	log.Printf("transcoded %s (new size %s)", audioURL, FileSize(transcodedSize))
-
-	item.FileName = path.Base(filePath)
-	item.Status = ItemReady
-
+	item.FileName, item.Status = path.Base(filePath), ItemAdded
 	if err := s.st.Add(item); err != nil {
 		return fmt.Errorf("failed to add item to the feed: %w", err)
 	}
 
-	log.Println("added", audioURL, "to the feed")
+	if err := s.q.Add(DownloadJob{SourceURI: audioURL, TargetURI: filePath}); err != nil {
+		return fmt.Errorf("failed to add download job for %s: %w", audioURL, err)
+	}
 
 	return nil
 }
