@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -131,9 +132,9 @@ func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinatio
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmpFile) // in case it still exists
+	defer os.Remove(tmpFile)
 
-	if err := os.Rename(tmpFile, destinationPath); err != nil {
+	if err := moveFile(tmpFile, destinationPath); err != nil {
 		return fmt.Errorf("failed to rename %s to %s: %w", tmpFile, destinationPath, err)
 	}
 
@@ -198,4 +199,29 @@ func (w *DownloadWorker) handleDownloadFailure(ctx context.Context, job Download
 	}
 
 	log.Printf("ignoring failed job %s", job.ItemID)
+}
+
+// moveFile moves a file from srcPath to destPath even if these path are on different filesystems.
+func moveFile(srcPath, destPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("failed to open %s: %w", srcPath, err)
+	}
+	defer src.Close()
+
+	dest, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create %s: %w", destPath, err)
+	}
+	defer dest.Close()
+
+	if _, err := io.Copy(dest, src); err != nil {
+		return fmt.Errorf("failed to copy %s to %s: %w", srcPath, destPath, err)
+	}
+
+	if err := os.Remove(srcPath); err != nil {
+		return fmt.Errorf("failed to remove %s: %w", srcPath, err)
+	}
+
+	return nil
 }
