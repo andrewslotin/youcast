@@ -67,6 +67,8 @@ func (w *DownloadWorker) Run(ctx context.Context, pollDuration time.Duration) {
 				go w.handleFileDownload(ctx, job)
 			case StatusDownloaded:
 				go w.handleFileConversion(ctx, job)
+			case StatusFailed:
+				go w.handleDownloadFailure(ctx, job)
 			default:
 				log.Printf("unexpected job status %q (job id %s)", job.Status, job.ItemID)
 				continue
@@ -180,4 +182,20 @@ func (w *DownloadWorker) convertFile(ctx context.Context, filePath string) error
 	log.Printf("transcoded %s (new size %s)", filePath, FileSize(transcodedSize))
 
 	return nil
+}
+
+func (w *DownloadWorker) handleDownloadFailure(ctx context.Context, job DownloadJob) {
+	if _, err := w.st.UpdateStatus(job.ItemID, ItemDownloadFailed); err == ErrItemNotFound {
+		log.Printf("podcast item %s was deleted, cancelling job", job.ItemID)
+
+		job.Status = StatusCancelled
+		if err := w.q.Update(job); err != nil {
+			log.Printf("failed to update job status to %s (job id %s): %s", job.ItemID, job.Status, err)
+			return
+		}
+
+		return
+	}
+
+	log.Printf("ignoring failed job %s", job.ItemID)
 }
