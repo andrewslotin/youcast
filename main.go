@@ -132,7 +132,7 @@ func main() {
 	}
 
 	log.Println("starting server on", args.ListenAddr, "...")
-	if err := http.ListenAndServe(args.ListenAddr, CORSMiddleware(srv.ServeMux())); err != nil {
+	if err := http.ListenAndServe(args.ListenAddr, CORSMiddleware(ProfileMiddleware(srv.ServeMux()))); err != nil {
 		log.Fatalln(err)
 	}
 }
