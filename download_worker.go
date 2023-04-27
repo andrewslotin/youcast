@@ -105,6 +105,8 @@ func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob
 	}()
 
 	newItemStatus := ItemDownloaded
+	job.Status = StatusDownloaded
+
 	if err := w.downloadFile(ctx, job.SourceURI, job.TargetURI); err != nil {
 		log.Printf("failed to download %s: %s", job.SourceURI, err)
 		newItemStatus = ItemDownloadFailed
@@ -121,8 +123,6 @@ func (w *DownloadWorker) handleFileDownload(ctx context.Context, job DownloadJob
 		log.Printf("podcast item %s was deleted, cancelling job", job.ItemID)
 		job.Status = StatusCancelled // item was deleted, cancel job
 	}
-
-	job.Status = StatusDownloaded
 }
 
 func (w *DownloadWorker) downloadFile(ctx context.Context, sourceURL, destinationPath string) error {
@@ -152,6 +152,8 @@ func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJ
 	}()
 
 	newItemStatus := ItemReady
+	job.Status = StatusReady
+
 	if err := w.convertFile(ctx, job.TargetURI); err != nil {
 		log.Printf("failed to convert %s: %s", job.TargetURI, err)
 		job.Status = StatusFailed
@@ -168,8 +170,6 @@ func (w *DownloadWorker) handleFileConversion(ctx context.Context, job DownloadJ
 		log.Printf("podcast item %s was deleted, cancelling job", job.ItemID)
 		job.Status = StatusCancelled // item was deleted, cancel job
 	}
-
-	job.Status = StatusReady
 }
 
 func (w *DownloadWorker) convertFile(ctx context.Context, filePath string) error {
