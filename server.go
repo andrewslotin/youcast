@@ -69,6 +69,7 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux.HandleFunc("/feed/", srv.HandleItem)
 	mux.HandleFunc("/favicon.ico", AssetHandler(assets.Icon, "image/png"))
 	mux.HandleFunc("/style.css", AssetHandler(assets.Stylesheet, "text/css"))
+	mux.HandleFunc("/script.js", AssetHandler(assets.JavaScript, "text/javascript"))
 	mux.HandleFunc("/downloads/", srv.ServeMedia)
 
 	return mux

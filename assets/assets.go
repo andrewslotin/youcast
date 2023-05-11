@@ -13,4 +13,7 @@ var (
 
 	//go:embed materialize.min.css
 	Stylesheet []byte
+
+	//go:embed materialize.min.js
+	JavaScript []byte
 )
