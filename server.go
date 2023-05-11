@@ -67,8 +67,8 @@ func (srv *FeedServer) ServeMux() *http.ServeMux {
 	mux.HandleFunc("/add/", srv.HandleAddItem)
 	mux.HandleFunc("/feed", srv.ServeFeed)
 	mux.HandleFunc("/feed/", srv.HandleItem)
-	mux.HandleFunc("/favicon.ico", srv.ServeIcon)
-	mux.HandleFunc("/style.css", srv.ServeStylesheet)
+	mux.HandleFunc("/favicon.ico", AssetHandler(assets.Icon, "image/png"))
+	mux.HandleFunc("/style.css", AssetHandler(assets.Stylesheet, "text/css"))
 	mux.HandleFunc("/downloads/", srv.ServeMedia)
 
 	return mux
@@ -135,17 +135,6 @@ func (srv *FeedServer) ServeFeed(w http.ResponseWriter, req *http.Request) {
 	if err := view.Render(w, feed); err != nil {
 		log.Println("failed to render feed to", view.ContentType(), ":", err)
 	}
-}
-
-// ServeIcon serves the favicon.ico file for the podcast feed.
-func (srv *FeedServer) ServeIcon(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "image/png")
-	w.Write(assets.Icon)
-}
-
-func (srv *FeedServer) ServeStylesheet(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/css")
-	w.Write(assets.Stylesheet)
 }
 
 // ServeMedia serves the podcast media files.
@@ -257,6 +246,15 @@ func (srv *FeedServer) HandleUpdateItem(w http.ResponseWriter, req *http.Request
 	}
 
 	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+}
+
+// AssetHandler returns a http.HandlerFunc that serves the given asset with the
+// given content type.
+func AssetHandler(asset []byte, contentType string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", contentType)
+		w.Write(asset)
+	}
 }
 
 func reqScheme(req *http.Request) string {
