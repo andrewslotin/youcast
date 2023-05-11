@@ -63,6 +63,12 @@
             <h2>Feed</h2>
         </div>
         <div class="row">
+          <ul class="tabs">
+            <li class="tab"><a href="#upload-file" class="active">Upload file</a></li>
+            <li class="tab"><a href="#add-youtube-video">YouTube video</a></li>
+          </ul>
+        </div>
+        <div id="upload-file" class="row">
           <form action="/add/my" method="POST" enctype="multipart/form-data">
             <div class="file-field input-field">
               <div class="btn">
@@ -71,6 +77,18 @@
               </div>
               <div class="file-path-wrapper">
                 <input class="file-path validate" type="text" placeholder="Upload a new podcast item">
+              </div>
+            </div>
+          </form>
+        </div>
+        <div id="add-youtube-video" class="row">
+          <form action="/add/yt" method="POST">
+            <div class="input-field">
+              <div class="col s9 offset-s1">
+                <input id="youtube-url" type="url" name="url" class="validate" placeholder="YouTube URL" required>
+              </div>
+              <div class="col s2">
+                <button type="submit" class="btn-floating btn-large waves-effect waves-light teal"><i class="material-icons">add</i></button>
               </div>
             </div>
           </form>
@@ -205,6 +223,7 @@
         document.querySelectorAll("#playlist [id^='toggle-update-item-'] a").forEach(function (el) {
             el.addEventListener("click", toggleEditMode);
         });
+
         document.querySelectorAll("#playlist button[type=reset]").forEach(function (el) {
             el.addEventListener("click", toggleEditMode);
         });
@@ -216,6 +235,9 @@
         document.querySelector("#upload-media-file").addEventListener("change", function (event) {
             event.target.closest("form").submit();
         });
+
+        M.AutoInit();
+        M.Tabs.init(document.querySelector(".tabs"), {});
     })(window);
     </script>
 </body>
