@@ -64,9 +64,21 @@
         </div>
         <div class="row">
           <ul class="tabs">
-            <li class="tab"><a href="#upload-file" class="active">Upload file</a></li>
-            <li class="tab"><a href="#add-youtube-video">YouTube video</a></li>
+            <li class="tab"><a href="#add-youtube-video" class="active">YouTube video</a></li>
+            <li class="tab"><a href="#upload-file">Upload file</a></li>
           </ul>
+        </div>
+        <div id="add-youtube-video" class="row">
+          <form action="/add/yt" method="POST">
+            <div class="input-field">
+              <div class="col s9 offset-s1">
+                <input id="youtube-url" type="url" name="url" class="validate" placeholder="YouTube URL" required>
+              </div>
+              <div class="col s2">
+                <button type="submit" class="btn-floating btn-large waves-effect waves-light teal"><i class="material-icons">add</i></button>
+              </div>
+            </div>
+          </form>
         </div>
         <div id="upload-file" class="row">
           <form action="/add/my" method="POST" enctype="multipart/form-data">
@@ -77,18 +89,6 @@
               </div>
               <div class="file-path-wrapper">
                 <input class="file-path validate" type="text" placeholder="Path to audio file">
-              </div>
-            </div>
-          </form>
-        </div>
-        <div id="add-youtube-video" class="row">
-          <form action="/add/yt" method="POST">
-            <div class="input-field">
-              <div class="col s9 offset-s1">
-                <input id="youtube-url" type="url" name="url" class="validate" placeholder="YouTube URL" required>
-              </div>
-              <div class="col s2">
-                <button type="submit" class="btn-floating btn-large waves-effect waves-light teal"><i class="material-icons">add</i></button>
               </div>
             </div>
           </form>
