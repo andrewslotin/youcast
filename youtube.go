@@ -45,11 +45,12 @@ func (yt *YouTubeProvider) HandleRequest(w http.ResponseWriter, req *http.Reques
 		return nil
 	}
 
-	if u := req.Referer(); u != "" { // added via the UI form field
-		http.Redirect(w, req, u, http.StatusSeeOther)
+	redirectURL := u
+	if ref := req.Referer(); ref != "" { // added via the UI form field
+		redirectURL = ref
 	}
 
-	http.Redirect(w, req, u, http.StatusSeeOther)
+	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 
 	return NewYouTubeVideo(id)
 }
