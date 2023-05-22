@@ -14,10 +14,16 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// DefaultDBPath is a default path to the database file
-const DefaultDBPath = "feed.db"
+const (
+	// DefaultDBPath is a default path to the database file
+	DefaultDBPath = "feed.db"
+
+	// Default podcast title
+	DefaultPodcastTitle = "YouCast"
+)
 
 var args struct {
+	Title       string
 	ListenAddr  string
 	DBPath      string
 	StoragePath string
@@ -26,12 +32,16 @@ var args struct {
 
 func main() {
 	log.Println("YouCast version", Version)
-
+	flag.StringVar(&args.Title, "title", os.Getenv("PODCAST_TITLE"), "Podcast title")
 	flag.StringVar(&args.ListenAddr, "l", os.Getenv("LISTEN_ADDR"), "Listen address")
 	flag.StringVar(&args.DBPath, "db", os.Getenv("DB_PATH"), "Path to the database")
 	flag.StringVar(&args.StoragePath, "storage-dir", os.Getenv("STORAGE_PATH"), "Path to the directory where to store downloaded files")
 	flag.BoolVar(&args.DevMode, "dev", false, "Development mode (read assets from ./assets on each request)")
 	flag.Parse()
+
+	if args.Title == "" {
+		args.Title = DefaultPodcastTitle
+	}
 
 	if p, ok := os.LookupEnv("PORT"); ok {
 		args.ListenAddr = ":" + p
@@ -74,7 +84,7 @@ func main() {
 	)
 
 	srv := NewFeedServer(PodcastMetadata{
-		Title:       "Listen Later",
+		Title:       args.Title,
 		Description: "These videos could have been a podcast...",
 	}, svc)
 
