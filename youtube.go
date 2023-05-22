@@ -50,7 +50,8 @@ func (yt *YouTubeProvider) HandleRequest(w http.ResponseWriter, req *http.Reques
 		redirectURL = ref
 	}
 
-	http.Redirect(w, req, redirectURL, http.StatusSeeOther)
+	// return the podcast item first, then redirect to the original URL
+	defer http.Redirect(w, req, redirectURL, http.StatusSeeOther)
 
 	return NewYouTubeVideo(id)
 }
