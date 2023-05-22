@@ -3,13 +3,23 @@ APP_UID ?= 1024
 VERSION ?= $(shell date +"%Y%m%d%H%M")
 IMAGE := $(REGISTRY)/youcast
 
+BUILDC ?= $(shell command -v podman 2>/dev/null)
+
+ifeq ($(BUILDC),)
+BUILDC = $(shell command -v docker 2>/dev/null)
+endif
+
+ifeq ($(BUILDC),)
+$(error "No build tool found. Please install podman or docker")
+endif
+
 push: latest
-	docker push $(IMAGE):$<
+	$(BUILDC) push $(IMAGE):$<
 
 latest: $(VERSION)
-	docker tag $(IMAGE):$< $(IMAGE):$@
+	$(BUILDC) tag $(IMAGE):$< $(IMAGE):$@
 
 $(VERSION):
-	docker build --build-arg APP_UID=$(APP_UID) --build-arg VERSION=$(VERSION) -t $(IMAGE):$@ .
+	$(BUILDC) build --build-arg APP_UID=$(APP_UID) --build-arg VERSION=$(VERSION) -t $(IMAGE):$@ .
 
 .PHONY: push latest $(VERSION)
