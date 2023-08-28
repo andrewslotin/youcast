@@ -43,7 +43,7 @@
             Drag &amp; drop this bookmarklet to your favorites bar.
         </div>
         <div class="row">
-            <a class="btn"
+            <a id="bookmarklet-btn" class="btn"
                 href="javascript:(function(){window.location='{{ .URL }}/add/yt?url='+encodeURIComponent(window.location);})();">Listen
                 later</a>
         </div>
@@ -55,7 +55,7 @@
                 class="language-markup">{{ .URL }}/feed</code>.
         </div>
         <div class="row">
-          <a class="waves-effect waves-light red btn" href="podcast://{{ .URL | stripScheme }}/feed">
+          <a id="subscribe-btn" class="waves-effect waves-light red btn" href="podcast://{{ .URL | stripScheme }}/feed">
             <i class="material-icons left">rss_feed</i>Subscribe
           </a>
         </div>
@@ -63,7 +63,7 @@
             <h2>Feed</h2>
         </div>
         <div class="row">
-          <ul class="tabs">
+          <ul id="source-tabs" class="tabs">
             <li class="tab"><a href="#add-youtube-video" class="active">YouTube video</a></li>
             <li class="tab"><a href="#upload-file">Upload file</a></li>
           </ul>
@@ -75,7 +75,7 @@
                 <input id="youtube-url" type="url" name="url" class="validate" placeholder="YouTube URL" required>
               </div>
               <div class="col s2">
-                <button type="submit" class="btn-floating btn-large waves-effect waves-light teal"><i class="material-icons">add</i></button>
+                <button id="add-youtube-video-btn" type="submit" class="btn-floating btn-large waves-effect waves-light teal"><i class="material-icons">add</i></button>
               </div>
             </div>
           </form>
