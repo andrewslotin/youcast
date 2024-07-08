@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 ARG APP_USER=appuser
 ARG APP_UID
