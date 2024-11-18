@@ -2,9 +2,9 @@ module github.com/andrewslotin/youcast
 
 // +heroku goVersion go1.16
 
-go 1.21
+go 1.22
 
-toolchain go1.22.3
+toolchain go1.23.3
 
 require (
 	github.com/boltdb/bolt v1.3.1
@@ -16,13 +16,13 @@ require (
 
 require (
 	github.com/bitly/go-simplejson v0.5.1 // indirect
-	github.com/dlclark/regexp2 v1.11.1 // indirect
-	github.com/dop251/goja v0.0.0-20240707163329-b1681fb2a2f5 // indirect
+	github.com/dlclark/regexp2 v1.11.4 // indirect
+	github.com/dop251/goja v0.0.0-20241024094426-79f3a7efcdbd // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
-	github.com/google/pprof v0.0.0-20240625030939-27f56978b8b0 // indirect
+	github.com/google/pprof v0.0.0-20241101162523-b92577c0c142 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 )
