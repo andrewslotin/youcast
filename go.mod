@@ -3,7 +3,6 @@ module github.com/andrewslotin/youcast
 // +heroku goVersion go1.16
 
 go 1.22.0
-
 toolchain go1.23.4
 
 require (
@@ -22,7 +21,7 @@ require (
 	github.com/google/pprof v0.0.0-20250125003558-7fdb3d7e6fa0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
