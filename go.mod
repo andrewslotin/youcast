@@ -1,7 +1,5 @@
 module github.com/andrewslotin/youcast
 
-// +heroku goVersion go1.16
-
 go 1.24.0
 
 require (
