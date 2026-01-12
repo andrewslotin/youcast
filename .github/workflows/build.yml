@@ -40,7 +40,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             APP_UID=1024
-            APP_USER=app
             VERSION=${{ github.ref_name }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
